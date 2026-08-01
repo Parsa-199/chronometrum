@@ -615,6 +615,14 @@ body{
   border-color:rgba(232,224,212,0.4);
 }
 .fb-input::placeholder{color:rgba(232,224,212,0.25)}
+.undo-toast{
+  position:fixed;left:50%;bottom:90px;transform:translateX(-50%) translateY(20px);
+  background:#000000;color:#e8e0d4;border:1px solid rgba(232,224,212,0.25);
+  border-radius:12px;padding:10px 16px;display:flex;align-items:center;gap:14px;
+  font-size:13px;z-index:200;opacity:0;pointer-events:none;transition:opacity 0.2s,transform 0.2s;
+}
+.undo-toast.show{opacity:1;transform:translateX(-50%) translateY(0);pointer-events:auto}
+.undo-toast button{background:none;border:none;color:#e8e0d4;font-weight:600;cursor:pointer;text-decoration:underline;padding:0;font-size:13px}
 .fb-btn{
   flex:1;
   padding:10px 14px;
@@ -708,6 +716,36 @@ body::before{
   .greek-column { display: none; }
   .laurel-left, .laurel-right { width: 35px; height: 70px; }
 }
+
+/* ===== SYNC DOT ===== */
+.sync-dot{width:6px;height:6px;border-radius:50%;background:#e8e0d4;opacity:0.15;display:inline-block;margin-left:6px;transition:opacity 0.3s;}
+.sync-dot.on{opacity:0.9;}
+
+/* ===== UNDO TOAST ===== */
+.undo-toast{
+  position:fixed;left:50%;bottom:20px;transform:translateX(-50%);
+  background:#111111;border:1px solid rgba(232,224,212,0.3);border-radius:12px;
+  padding:10px 14px;display:flex;align-items:center;gap:12px;
+  font-family:'Playfair Display',Georgia,serif;font-size:13px;color:#e8e0d4;
+  box-shadow:0 8px 32px rgba(0,0,0,0.5);z-index:10000;
+}
+.undo-toast button{
+  background:rgba(232,224,212,0.1);border:1px solid rgba(232,224,212,0.3);
+  color:#e8e0d4;border-radius:8px;padding:5px 12px;cursor:pointer;font-size:12px;
+  font-family:'Playfair Display',Georgia,serif;
+}
+.undo-toast button:hover{background:rgba(232,224,212,0.2);}
+
+/* ===== EDIT SESSION ROW ===== */
+.edit-row{
+  background:#111111;border:1px solid rgba(232,224,212,0.25);border-radius:12px;
+  padding:12px;margin-bottom:8px;display:flex;flex-direction:column;gap:8px;
+}
+.edit-row select.fb-input{cursor:pointer;}
+.edit-row .edit-actions{display:flex;gap:8px;}
+.session-note{font-size:11px;color:#e8e0d4;opacity:0.35;margin-top:2px;font-style:italic;}
+.hist-actions{display:flex;gap:4px;}
+
 </style>
 </head>
 <body>
@@ -835,6 +873,7 @@ body::before{
 <h3 class="section-heading"> Data Management</h3>
 <div class="export-btns">
 <button onclick="exportJSON()"><span style="display:inline-flex;align-items:center;vertical-align:middle"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7,10 12,15 17,10"/><line x1="12" y1="15" x2="12" y2="3"/></svg></span> Download JSON</button>
+<button onclick="exportCSV()"><span style="display:inline-flex;align-items:center;vertical-align:middle"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7,10 12,15 17,10"/><line x1="12" y1="15" x2="12" y2="3"/></svg></span> Download CSV</button>
 <button onclick="document.getElementById('fileInput').click()"><span style="display:inline-flex;align-items:center;vertical-align:middle"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="17,8 12,3 7,8"/><line x1="12" y1="3" x2="12" y2="15"/></svg></span> Upload JSON</button>
 <input type="file" id="fileInput" accept=".json" style="display:none" onchange="importJSON(event)">
 </div>
@@ -843,8 +882,8 @@ body::before{
 <h3 style="font-size:14px;color:#e8e0d4;margin:0 0 8px;opacity:0.7">Cloud Sync (Firebase)</h3>
 <div id="firebaseStatus" style="font-size:12px;color:#e8e0d4;opacity:0.5;margin-bottom:8px">Not connected</div>
 <div style="display:flex;gap:8px;flex-wrap:wrap">
-<input type="text" id="fbProject" class="fb-input" placeholder="Project ID or full Database URL">
-<input type="text" id="fbSecret" class="fb-input" placeholder="Database Secret">
+<input type="text" id="fbProject" class="fb-input" placeholder="Project ID or full Database URL" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false">
+<input type="text" id="fbSecret" class="fb-input" placeholder="Database Secret" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false">
 </div>
 <div style="display:flex;gap:8px;margin-top:10px">
 <button class="fb-btn" onclick="connectFirebase()">Connect</button>
@@ -930,8 +969,10 @@ function selectCategory(name){
 function removeCategory(name){
   if(!confirm('Delete '+name+'?'))return;
   if(selectedCat===name) selectedCat='';
+  lastDeleted={type:'category',data:name};
   state.categories=state.categories.filter(c=>c!==name);
   saveState();renderCategories();
+  showUndoToast('Category deleted');
 }
 
 // ===== TIMER =====
@@ -952,6 +993,7 @@ function stopTimer(){
   const dur=elapsed;
   if(dur>0&&selectedCat){
     state.sessions.push({
+      id:Date.now()+'-'+Math.random().toString(36).slice(2,8),
       category:selectedCat,
       duration:dur,
       date:new Date().toISOString(),
@@ -992,33 +1034,46 @@ function showReport(type,btn){
   const today=new Date();
   let sessions=[];
   let title='';
+  let availableSec=0;
   if(type==='daily'){
     const todayStr=today.toLocaleDateString('en-US');
     sessions=state.sessions.filter(s=>s.dateStr===todayStr);
     title='Today';
+    // % is against the full 24h day, not just the hours since your first
+    // session today -- a day always "has" 24 hours available.
+    availableSec=24*3600;
   }else if(type==='weekly'){
     const weekAgo=new Date(today);weekAgo.setDate(weekAgo.getDate()-7);
     sessions=state.sessions.filter(s=>new Date(s.date)>=weekAgo);
     title='Last 7 Days';
+    // % is against the time elapsed since your first session in this
+    // window, not a fixed 7*24h -- if you only started 2 days ago, the
+    // window you actually "had" is 2 days, not 7.
+    availableSec=sessions.length?Math.max(1,Math.round((today-new Date(Math.min(...sessions.map(s=>new Date(s.date))))) /1000)):0;
   }else{
     const monthAgo=new Date(today);monthAgo.setDate(monthAgo.getDate()-30);
     sessions=state.sessions.filter(s=>new Date(s.date)>=monthAgo);
     title='Last 30 Days';
+    availableSec=sessions.length?Math.max(1,Math.round((today-new Date(Math.min(...sessions.map(s=>new Date(s.date))))) /1000)):0;
   }
   const total=sessions.reduce((a,s)=>a+s.duration,0);
   const byCat={};
   sessions.forEach(s=>{byCat[s.category]=(byCat[s.category]||0)+s.duration;});
   const maxVal=Math.max(...Object.values(byCat),1);
-  const colors=['#e8e0d4','#c9a86a','#8fa9c9','#a8c99a','#c99a9a','#b39ac9','#9ac9c2'];
+  // Monochrome palette: same accent color at decreasing opacity, so every
+  // bar stays distinct without introducing new hues to the theme.
+  const opacities=[1,0.8,0.62,0.48,0.36,0.26,0.18];
   let html='<div class="report-card"><h3>'+title+'</h3>';
   html+='<div class="report-row"><span>Total Time</span><span class="val">'+formatDuration(total)+'</span></div>';
   html+='<div class="report-row"><span>Session Count</span><span class="val">'+sessions.length+'</span></div>';
+  html+='<div class="report-row"><span>Time Utilized</span><span class="val">'+(availableSec>0?Math.round(total/availableSec*100):0)+'%</span></div>';
   html+='</div><div class="report-card"><h3> By Category</h3><div class="bar-chart">';
   let i=0;
   for(const[cat,dur] of Object.entries(byCat)){
     const pct=maxVal>0?(dur/maxVal*100):0;
-    var pctTotal=total>0?Math.round(dur/total*100):0;
-    html+='<div class="bar-row"><span class="bar-label">'+escapeHtml(cat)+'</span><div class="bar-track"><div class="bar-fill" style="width:'+pct+'%;background:'+colors[i%colors.length]+'"></div></div><span class="bar-val">'+(dur>0?formatDuration(dur):'—')+'</span><span class="bar-pct">'+pctTotal+'%</span></div>';
+    var pctAvail=availableSec>0?Math.round(dur/availableSec*100):0;
+    const op=opacities[i%opacities.length];
+    html+='<div class="bar-row"><span class="bar-label">'+escapeHtml(cat)+'</span><div class="bar-track"><div class="bar-fill" style="width:'+pct+'%;background:#e8e0d4;opacity:'+op+'"></div></div><span class="bar-val">'+(dur>0?formatDuration(dur):'—')+'</span><span class="bar-pct">'+pctAvail+'%</span></div>';
     i++;
   }
   html+='</div></div>';
@@ -1043,8 +1098,31 @@ function renderHistory(){
     return '<div class="history-item"><div class="info"><div>'+escapeHtml(s.category)+'</div><div class="cat">'+s.dateStr+' '+s.timeStr+'</div></div><span class="dur">'+formatDuration(s.duration)+'</span><button class="del-h" onclick="deleteSession('+idx+')"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button></div>';
   }).join('');
 }
+let lastDeleted=null,undoTimer=null;
+function showUndoToast(label){
+  clearTimeout(undoTimer);
+  document.getElementById('undoToastText').textContent=label;
+  const el=document.getElementById('undoToast');
+  el.classList.add('show');
+  undoTimer=setTimeout(function(){el.classList.remove('show');lastDeleted=null;},6000);
+}
+function undoDelete(){
+  if(!lastDeleted)return;
+  if(lastDeleted.type==='session'){
+    state.sessions.splice(lastDeleted.idx,0,lastDeleted.data);
+    saveState();renderHistory();renderCategories();
+  }else if(lastDeleted.type==='category'){
+    if(!state.categories.includes(lastDeleted.data)) state.categories.push(lastDeleted.data);
+    saveState();renderCategories();
+  }
+  lastDeleted=null;
+  clearTimeout(undoTimer);
+  document.getElementById('undoToast').classList.remove('show');
+}
 function deleteSession(idx){
+  lastDeleted={type:'session',data:state.sessions[idx],idx:idx};
   state.sessions.splice(idx,1);saveState();renderHistory();renderCategories();
+  showUndoToast('Session deleted');
 }
 
 // ===== EXPORT/IMPORT =====
@@ -1053,6 +1131,22 @@ function exportJSON(){
   const url=URL.createObjectURL(blob);
   const a=document.createElement('a');
   a.href=url;a.download='timetracker-'+new Date().toISOString().slice(0,10)+'.json';
+  a.click();URL.revokeObjectURL(url);
+}
+function csvEscape(v){
+  v=String(v);
+  return /[",\n]/.test(v)?'"'+v.replace(/"/g,'""')+'"':v;
+}
+function exportCSV(){
+  const rows=[['date','time','category','duration_seconds','duration']];
+  state.sessions.forEach(s=>{
+    rows.push([s.dateStr,s.timeStr,s.category,s.duration,formatDuration(s.duration)]);
+  });
+  const csv=rows.map(r=>r.map(csvEscape).join(',')).join('\n');
+  const blob=new Blob([csv],{type:'text/csv'});
+  const url=URL.createObjectURL(blob);
+  const a=document.createElement('a');
+  a.href=url;a.download='timetracker-'+new Date().toISOString().slice(0,10)+'.csv';
   a.click();URL.revokeObjectURL(url);
 }
 function importJSON(e){
@@ -1069,6 +1163,19 @@ function importJSON(e){
   };
   reader.readAsText(file);e.target.value='';
 }
+function currentStreak(){
+  const daySet=new Set(state.sessions.map(s=>s.dateStr));
+  let streak=0;
+  let d=new Date();
+  // If nothing logged yet today, that's fine -- start counting from yesterday
+  // instead of breaking the streak at zero the moment the day rolls over.
+  if(!daySet.has(d.toLocaleDateString('en-US'))) d.setDate(d.getDate()-1);
+  while(daySet.has(d.toLocaleDateString('en-US'))){
+    streak++;
+    d.setDate(d.getDate()-1);
+  }
+  return streak;
+}
 function renderDataStats(){
   const total=state.sessions.reduce((a,s)=>a+s.duration,0);
   const days=new Set(state.sessions.map(s=>s.dateStr)).size;
@@ -1076,6 +1183,7 @@ function renderDataStats(){
     '<h3> Overview</h3>'+
     '<div class="report-row"><span>Total Sessions</span><span class="val">'+state.sessions.length+'</span></div>'+
     '<div class="report-row"><span>Active Days</span><span class="val">'+days+'</span></div>'+
+    '<div class="report-row"><span>Current Streak</span><span class="val">'+currentStreak()+' days</span></div>'+
     '<div class="report-row"><span>Total Time</span><span class="val">'+formatDuration(total)+'</span></div>'+
     '<div class="report-row"><span>Daily Average</span><span class="val">'+formatDuration(days>0?Math.round(total/days):0)+'</span></div>'+
     '<div class="report-row"><span>Categories</span><span class="val">'+state.categories.length+'</span></div>';
@@ -1480,6 +1588,17 @@ function formatGregorian(now){
 // to the Realtime Database REST endpoint directly and pass it as ?auth=...
 let fbBaseUrl=null, fbSecret=null;
 
+// fetch with a hard timeout -- plain fetch() can hang forever with zero
+// feedback if a network/carrier/DNS filter silently drops the request,
+// which is exactly what makes it look like "nothing happens" on mobile.
+function fetchWithTimeout(url,opts,ms){
+  ms=ms||10000;
+  const ctrl=new AbortController();
+  const t=setTimeout(function(){ctrl.abort();},ms);
+  return fetch(url,Object.assign({},opts,{signal:ctrl.signal}))
+    .finally(function(){clearTimeout(t);});
+}
+
 function connectFirebase(){
   try{
     const proj=document.getElementById('fbProject').value.trim();
@@ -1492,19 +1611,26 @@ function connectFirebase(){
     let dbRoot=proj;
     if(!/^https?:\/\//i.test(dbRoot)) dbRoot='https://'+dbRoot+'.firebaseio.com';
     dbRoot=dbRoot.replace(/\/$/,'');
-    fbBaseUrl=dbRoot+'/timetracker.json';
-    fbSecret=secret;
+    const testUrl=dbRoot+'/timetracker.json';
+    const testSecret=secret;
+    // Immediate feedback so the user can tell the tap registered at all,
+    // before we even know if the network request will succeed.
+    document.getElementById('firebaseStatus').textContent='Connecting…';
+    document.getElementById('firebaseStatus').style.opacity='0.8';
     // Verify the project + secret actually work before claiming "Connected".
-    fetch(fbBaseUrl+'?auth='+encodeURIComponent(fbSecret)+'&shallow=true')
+    fetchWithTimeout(testUrl+'?auth='+encodeURIComponent(testSecret)+'&shallow=true',{},10000)
       .then(function(res){
         if(!res.ok) throw new Error('HTTP '+res.status+' (check Project ID / Database Secret)');
+        fbBaseUrl=testUrl;
+        fbSecret=testSecret;
         localStorage.setItem('fbConfig',JSON.stringify({project:proj,secret:secret}));
         document.getElementById('firebaseStatus').textContent='Connected to '+proj;
         document.getElementById('firebaseStatus').style.opacity='0.8';
       })
       .catch(function(e){
         fbBaseUrl=null;fbSecret=null;
-        document.getElementById('firebaseStatus').textContent='Error: '+e.message;
+        const msg=(e.name==='AbortError')?'Timed out — request never got a response (check network/VPN/DNS filtering)':e.message;
+        document.getElementById('firebaseStatus').textContent='Error: '+msg;
         document.getElementById('firebaseStatus').style.opacity='1';
       });
   }catch(e){
@@ -1513,30 +1639,63 @@ function connectFirebase(){
   }
 }
 
+// Two devices can each have local-only sessions the other has never seen.
+// A blind overwrite (either direction) silently deletes whichever side wasn't
+// pushed most recently -- that's exactly what wiped the phone's session
+// earlier. Instead we always union the two session lists (deduped by id, or
+// by date+category+duration for older sessions saved before ids existed) and
+// union the category lists, so neither side's data is ever discarded.
+function mergeStates(a,b){
+  const keyOf=s=>s.id||(s.date+'|'+s.category+'|'+s.duration);
+  const map=new Map();
+  (a.sessions||[]).forEach(s=>map.set(keyOf(s),s));
+  (b.sessions||[]).forEach(s=>map.set(keyOf(s),s));
+  const sessions=Array.from(map.values()).sort((x,y)=>new Date(x.date)-new Date(y.date));
+  const categories=Array.from(new Set([...(a.categories||[]),...(b.categories||[])]));
+  return {categories,sessions};
+}
+
 function syncToFirebase(){
   if(!fbBaseUrl){alert('Connect to Firebase first');return;}
-  fetch(fbBaseUrl+'?auth='+encodeURIComponent(fbSecret),{
-    method:'PUT',
-    headers:{'Content-Type':'application/json'},
-    body:JSON.stringify(state)
-  }).then(function(res){
-    if(!res.ok) throw new Error('HTTP '+res.status);
-    document.getElementById('firebaseStatus').textContent='Synced!';
-  }).catch(function(e){
-    document.getElementById('firebaseStatus').textContent='Error: '+e.message;
-  });
+  document.getElementById('firebaseStatus').textContent='Syncing…';
+  // Pull first and merge, so we never clobber sessions another device
+  // already pushed but this device hasn't loaded yet.
+  fetchWithTimeout(fbBaseUrl+'?auth='+encodeURIComponent(fbSecret),{},10000)
+    .then(function(res){
+      if(!res.ok) throw new Error('HTTP '+res.status);
+      return res.json();
+    })
+    .then(function(remote){
+      const merged=(remote&&remote.categories&&remote.sessions)?mergeStates(state,remote):state;
+      state=merged;
+      saveState();
+      renderCategories();
+      renderHistory();
+      return fetchWithTimeout(fbBaseUrl+'?auth='+encodeURIComponent(fbSecret),{
+        method:'PUT',
+        headers:{'Content-Type':'application/json'},
+        body:JSON.stringify(state)
+      },10000);
+    }).then(function(res){
+      if(!res.ok) throw new Error('HTTP '+res.status);
+      document.getElementById('firebaseStatus').textContent='Synced!';
+    }).catch(function(e){
+      const msg=(e.name==='AbortError')?'Timed out — request never got a response':e.message;
+      document.getElementById('firebaseStatus').textContent='Error: '+msg;
+    });
 }
 
 function loadFromFirebase(){
   if(!fbBaseUrl){alert('Connect to Firebase first');return;}
-  fetch(fbBaseUrl+'?auth='+encodeURIComponent(fbSecret))
+  document.getElementById('firebaseStatus').textContent='Loading…';
+  fetchWithTimeout(fbBaseUrl+'?auth='+encodeURIComponent(fbSecret),{},10000)
     .then(function(res){
       if(!res.ok) throw new Error('HTTP '+res.status);
       return res.json();
     })
     .then(function(data){
       if(data&&data.categories&&data.sessions){
-        state=data;
+        state=mergeStates(state,data);
         saveState();
         renderCategories();
         renderHistory();
@@ -1546,7 +1705,8 @@ function loadFromFirebase(){
       }
     })
     .catch(function(e){
-      document.getElementById('firebaseStatus').textContent='Error: '+e.message;
+      const msg=(e.name==='AbortError')?'Timed out — request never got a response':e.message;
+      document.getElementById('firebaseStatus').textContent='Error: '+msg;
     });
 }
 
@@ -1581,5 +1741,6 @@ function updateLiveClock(){
 updateLiveClock();
 setInterval(updateLiveClock,1000);
 </script>
+<div id="undoToast" class="undo-toast"><span id="undoToastText"></span><button onclick="undoDelete()">Undo</button></div>
 </body>
 </html>
