@@ -263,7 +263,13 @@ body{
 .cat-select option{text-align:center;background:#000000;color:#e8e0d4}
 
 /* ===== START BUTTON ===== */
+.timer-btn-row{
+  display:flex;
+  gap:10px;
+  margin-top:14px;
+}
 .start-btn{
+  flex:1;
   width:100%;
   padding:16px;
   border-radius:16px;
@@ -272,11 +278,34 @@ body{
   font-weight:700;
   font-family:'Playfair Display',Georgia,serif;
   cursor:pointer;
-  margin-top:14px;
+  margin-top:0;
   transition:all 0.3s ease;
   letter-spacing:0.5px;
   position:relative;
   overflow:hidden;
+}
+.pause-btn{
+  flex:0 0 auto;
+  padding:16px 20px;
+  border-radius:16px;
+  background:rgba(232,224,212,0.08);
+  color:#e8e0d4;
+  border:1px solid rgba(232,224,212,0.2);
+  font-size:14px;
+  font-weight:700;
+  font-family:'Courier New',monospace;
+  cursor:pointer;
+  transition:all 0.3s ease;
+  letter-spacing:0.3px;
+}
+.pause-btn:hover{
+  background:rgba(232,224,212,0.14);
+  border-color:rgba(232,224,212,0.35);
+}
+.pause-btn:active{transform:scale(0.96)}
+.pause-btn.resumed{
+  background:rgba(232,224,212,0.14);
+  border-color:rgba(232,224,212,0.4);
 }
 .start-btn::after{
   content:'';
@@ -615,6 +644,21 @@ body{
   border-color:rgba(232,224,212,0.4);
 }
 .fb-input::placeholder{color:rgba(232,224,212,0.25)}
+.heatmap{
+  display:grid;
+  grid-template-rows:repeat(7,1fr);
+  grid-auto-flow:column;
+  gap:3px;
+  overflow-x:auto;
+  padding-bottom:4px;
+  direction:ltr;
+}
+.heatmap-cell{
+  width:11px;
+  height:11px;
+  border-radius:3px;
+  background:rgba(232,224,212,0.06);
+}
 .undo-toast{
   position:fixed;left:50%;bottom:90px;transform:translateX(-50%) translateY(20px);
   background:#000000;color:#e8e0d4;border:1px solid rgba(232,224,212,0.25);
@@ -721,19 +765,7 @@ body::before{
 .sync-dot{width:6px;height:6px;border-radius:50%;background:#e8e0d4;opacity:0.15;display:inline-block;margin-left:6px;transition:opacity 0.3s;}
 .sync-dot.on{opacity:0.9;}
 
-/* ===== UNDO TOAST ===== */
-.undo-toast{
-  position:fixed;left:50%;bottom:20px;transform:translateX(-50%);
-  background:#111111;border:1px solid rgba(232,224,212,0.3);border-radius:12px;
-  padding:10px 14px;display:flex;align-items:center;gap:12px;
-  font-family:'Playfair Display',Georgia,serif;font-size:13px;color:#e8e0d4;
-  box-shadow:0 8px 32px rgba(0,0,0,0.5);z-index:10000;
-}
-.undo-toast button{
-  background:rgba(232,224,212,0.1);border:1px solid rgba(232,224,212,0.3);
-  color:#e8e0d4;border-radius:8px;padding:5px 12px;cursor:pointer;font-size:12px;
-  font-family:'Playfair Display',Georgia,serif;
-}
+
 .undo-toast button:hover{background:rgba(232,224,212,0.2);}
 
 /* ===== EDIT SESSION ROW ===== */
@@ -840,7 +872,10 @@ body::before{
 </svg>
 <div class="timer-display" id="timerDisplay">00:00:00</div>
 <div class="timer-label" id="timerLabel">Ready</div>
+<div class="timer-btn-row">
 <button class="start-btn start" id="startBtn" onclick="toggleTimer()"><span style="display:inline-flex;align-items:center;vertical-align:middle"><svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><polygon points="5,3 19,12 5,21"/></svg></span> Start</button>
+<button class="pause-btn" id="pauseBtn" onclick="togglePause()" style="display:none"><span style="display:inline-flex;align-items:center;vertical-align:middle"><svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><rect x="6" y="4" width="4" height="16" rx="1"/><rect x="14" y="4" width="4" height="16" rx="1"/></svg></span> Pause</button>
+</div>
 </div>
 <div style="margin-top:20px">
 <h3 class="section-heading"><span style="display:inline-flex;align-items:center;vertical-align:middle"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20.59 13.41l-7.17 7.17a2 2 0 01-2.83 0L2 12V2h10l8.59 8.59a2 2 0 010 2.82z"/><circle cx="7" cy="7" r="1" fill="currentColor"/></svg></span> Categories</h3>
@@ -848,6 +883,17 @@ body::before{
 <div class="add-cat">
 <input type="text" id="newCatInput" placeholder="New category..." onkeypress="if(event.key==='Enter')addCategory()">
 <button onclick="addCategory()" style="cursor:pointer"><span style="display:inline-flex;align-items:center;vertical-align:middle"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg></span></button>
+</div>
+
+<div style="margin-top:14px">
+<h3 class="section-heading" style="font-size:13px;opacity:0.7">Add Time Manually</h3>
+<select id="manualCat" class="cat-select" style="margin-bottom:8px"></select>
+<div style="display:flex;gap:8px;align-items:center">
+<input type="number" id="manualHours" min="0" placeholder="Hours" class="fb-input" style="text-align:center">
+<input type="number" id="manualMinutes" min="0" max="59" placeholder="Minutes" class="fb-input" style="text-align:center">
+<input type="date" id="manualDate" class="fb-input" style="flex:1.4">
+</div>
+<button onclick="addManualTime()" class="fb-btn" style="width:100%;margin-top:8px">Add</button>
 </div>
 </div>
 </div>
@@ -858,6 +904,12 @@ body::before{
 <button class="active" onclick="showReport('daily',this)">Daily</button>
 <button onclick="showReport('weekly',this)">Weekly</button>
 <button onclick="showReport('monthly',this)">Monthly</button>
+<button onclick="showReport('custom',this)">Custom</button>
+</div>
+<div id="customRange" style="display:none;gap:8px;margin-bottom:12px">
+<input type="date" id="reportFrom" class="fb-input">
+<input type="date" id="reportTo" class="fb-input">
+<button class="fb-btn" onclick="showReport('custom',document.querySelector('.report-tabs button:last-child'))">Apply</button>
 </div>
 <div id="reportContent"></div>
 </div>
@@ -893,6 +945,15 @@ body::before{
 </div>
 
 <div id="dataStats" class="report-card" style="margin-top:12px"></div>
+<div class="report-card" style="margin-top:12px">
+<h3 style="font-size:14px;color:#e8e0d4;margin:0 0 8px;opacity:0.7">Activity (last 13 weeks)</h3>
+<div id="heatmap" class="heatmap"></div>
+</div>
+
+<div class="report-card" style="margin-top:12px">
+<h3 style="font-size:14px;color:#e8e0d4;margin:0 0 8px;opacity:0.7">Local Backups</h3>
+<div id="backupList"></div>
+</div>
 </div>
 
 <script>
@@ -902,6 +963,7 @@ let timer = null;
 let startTime = null;
 let elapsed = 0;
 let running = false;
+let paused = false;
 let selectedCat = '';
 
 
@@ -909,10 +971,31 @@ function defaultState(){
   return {categories:['Scikit-learn','English','Projects','Math'],sessions:[]};
 }
 function loadState(){
-  try{const s=localStorage.getItem('timetracker');return s?JSON.parse(s):defaultState();}
-  catch(e){return defaultState();}
+  let s;
+  try{const raw=localStorage.getItem('timetracker');s=raw?JSON.parse(raw):defaultState();}
+  catch(e){s=defaultState();}
+  // Older sessions (saved before ids existed) need one assigned so
+  // edit/delete/undo/merge can all reference them reliably.
+  let changed=false;
+  (s.sessions||[]).forEach(sess=>{
+    if(!sess.id){sess.id=Date.now()+'-'+Math.random().toString(36).slice(2,8);changed=true;}
+  });
+  if(changed) localStorage.setItem('timetracker',JSON.stringify(s));
+  return s;
 }
-function saveState(){localStorage.setItem('timetracker',JSON.stringify(state));}
+function saveState(){localStorage.setItem('timetracker',JSON.stringify(state));maybeBackup();}
+function maybeBackup(force){
+  try{
+    let backups=JSON.parse(localStorage.getItem('timetracker_backups')||'[]');
+    const last=backups[backups.length-1];
+    const now=Date.now();
+    if(force||!last||now-last.ts>24*3600*1000){
+      backups.push({ts:now,data:state});
+      if(backups.length>7) backups=backups.slice(-7);
+      localStorage.setItem('timetracker_backups',JSON.stringify(backups));
+    }
+  }catch(e){}
+}
 
 // ===== NAVIGATION =====
 function showPage(id){
@@ -940,11 +1023,19 @@ function escapeHtml(str){
 function renderCategories(){
 
   const list=document.getElementById('catList');
+  const manualSel=document.getElementById('manualCat');
+  if(manualSel){
+    const prev=manualSel.value;
+    manualSel.innerHTML=state.categories.length
+      ? state.categories.map(c=>'<option value="'+escapeHtml(c)+'">'+escapeHtml(c)+'</option>').join('')
+      : '<option value="">Add a category first</option>';
+    if(state.categories.includes(prev)) manualSel.value=prev;
+  }
   if(!state.categories.length){list.innerHTML='<div class="empty">No categories yet</div>';return;}
   list.innerHTML=state.categories.map(c=>{
     const total=state.sessions.filter(s=>s.category===c).reduce((a,s)=>a+s.duration,0);
     const sel=selectedCat===c?'selected':'';
-    const locked=running?' style="pointer-events:none;opacity:0.5"':'';
+    const locked=(running||paused)?' style="pointer-events:none;opacity:0.5"':'';
     return '<div class="cat-item selectable '+sel+'"'+locked+' data-cat="'+escapeHtml(c)+'"><span class="name"> '+escapeHtml(c)+'</span><span class="time">'+formatDuration(total)+'</span><button class="del" data-del="'+escapeHtml(c)+'"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button></div>';
   }).join('');
 }
@@ -954,6 +1045,27 @@ document.addEventListener('click',function(e){
   const item=e.target.closest('[data-cat]');
   if(item){selectCategory(item.getAttribute('data-cat'));}
 });
+// Keyboard shortcuts on the Timer page only, and never while typing in a field.
+document.addEventListener('keydown',function(e){
+  const tag=(e.target.tagName||'').toLowerCase();
+  if(tag==='input'||tag==='select'||tag==='textarea')return;
+  const timerActive=document.getElementById('page-timer').classList.contains('active');
+  if(!timerActive)return;
+  if(e.code==='Space'){
+    e.preventDefault();
+    toggleTimer();
+  }else if(e.key==='p'||e.key==='P'){
+    if(running||paused){e.preventDefault();togglePause();}
+  }
+});
+// Losing the tab mid-session would silently lose all unsaved elapsed time,
+// since a session is only written to state.sessions on Stop.
+window.addEventListener('beforeunload',function(e){
+  if(running||paused){
+    e.preventDefault();
+    e.returnValue='';
+  }
+});
 function addCategory(){
   const input=document.getElementById('newCatInput');
   const name=input.value.trim();
@@ -961,8 +1073,39 @@ function addCategory(){
   state.categories.push(name);
   saveState();renderCategories();input.value='';
 }
+function addManualTime(){
+  const cat=document.getElementById('manualCat').value;
+  if(!cat){alert('Add a category first');return;}
+  const h=parseInt(document.getElementById('manualHours').value)||0;
+  const m=parseInt(document.getElementById('manualMinutes').value)||0;
+  const dur=h*3600+m*60;
+  if(dur<=0){alert('Enter hours and/or minutes');return;}
+  const dateVal=document.getElementById('manualDate').value;
+  let d;
+  if(dateVal){
+    // Build the date from its local y/m/d parts at noon, rather than
+    // new Date('YYYY-MM-DD') which parses as UTC midnight and can land on
+    // the previous day once converted to a negative-offset local timezone.
+    const parts=dateVal.split('-').map(Number);
+    d=new Date(parts[0],parts[1]-1,parts[2],12,0,0);
+  }else{
+    d=new Date();
+  }
+  state.sessions.push({
+    id:Date.now()+'-'+Math.random().toString(36).slice(2,8),
+    category:cat,
+    duration:dur,
+    date:d.toISOString(),
+    dateStr:d.toLocaleDateString('en-US'),
+    timeStr:'manual entry'
+  });
+  saveState();
+  renderCategories();renderHistory();
+  document.getElementById('manualHours').value='';
+  document.getElementById('manualMinutes').value='';
+}
 function selectCategory(name){
-  if(running)return; // don't allow switching categories on an active session
+  if(running||paused)return; // don't allow switching categories on an active session
   selectedCat=(selectedCat===name)?'':name;
   renderCategories();
 }
@@ -977,18 +1120,49 @@ function removeCategory(name){
 
 // ===== TIMER =====
 function toggleTimer(){
-  if(running){stopTimer();}else{startTimer();}
+  if(running||paused){stopTimer();}else{startTimer();}
 }
 function startTimer(){
   if(!selectedCat){alert('Select a category first!');return;}
-  running=true;startTime=Date.now()-elapsed*1000;
+  running=true;paused=false;startTime=Date.now()-elapsed*1000;
   document.getElementById('startBtn').className='start-btn stop';
   document.getElementById('startBtn').innerHTML='<span style="display:inline-flex;align-items:center;vertical-align:middle"><svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><rect x="4" y="4" width="16" height="16" rx="2"/></svg></span> Stop';
   document.getElementById('timerLabel').textContent='Working on: '+selectedCat;
+  const pauseBtn=document.getElementById('pauseBtn');
+  pauseBtn.style.display='';
+  pauseBtn.classList.remove('resumed');
+  pauseBtn.innerHTML='<span style="display:inline-flex;align-items:center;vertical-align:middle"><svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><rect x="6" y="4" width="4" height="16" rx="1"/><rect x="14" y="4" width="4" height="16" rx="1"/></svg></span> Pause';
   timer=setInterval(updateTimer,1000);
+  renderCategories();
+}
+function togglePause(){
+  if(running){pauseTimer();}else if(paused){resumeTimer();}
+}
+function pauseTimer(){
+  if(!running)return;
+  elapsed=Math.round((Date.now()-startTime)/1000);
+  updateTimerDisplay(elapsed);
+  clearInterval(timer);
+  running=false;paused=true;
+  const pauseBtn=document.getElementById('pauseBtn');
+  pauseBtn.classList.add('resumed');
+  pauseBtn.innerHTML='<span style="display:inline-flex;align-items:center;vertical-align:middle"><svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><polygon points="5,3 19,12 5,21"/></svg></span> Resume';
+  document.getElementById('timerLabel').textContent='Paused: '+selectedCat;
+  renderCategories();
+}
+function resumeTimer(){
+  if(!paused)return;
+  paused=false;running=true;
+  startTime=Date.now()-elapsed*1000;
+  timer=setInterval(updateTimer,1000);
+  const pauseBtn=document.getElementById('pauseBtn');
+  pauseBtn.classList.remove('resumed');
+  pauseBtn.innerHTML='<span style="display:inline-flex;align-items:center;vertical-align:middle"><svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><rect x="6" y="4" width="4" height="16" rx="1"/><rect x="14" y="4" width="4" height="16" rx="1"/></svg></span> Pause';
+  document.getElementById('timerLabel').textContent='Working on: '+selectedCat;
+  renderCategories();
 }
 function stopTimer(){
-  running=false;clearInterval(timer);
+  running=false;paused=false;clearInterval(timer);
   
   const dur=elapsed;
   if(dur>0&&selectedCat){
@@ -1005,6 +1179,10 @@ function stopTimer(){
   elapsed=0;updateTimerDisplay(0);
   document.getElementById('startBtn').className='start-btn start';
   document.getElementById('startBtn').innerHTML='<span style="display:inline-flex;align-items:center;vertical-align:middle"><svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><polygon points="5,3 19,12 5,21"/></svg></span> Start';
+  const pauseBtn=document.getElementById('pauseBtn');
+  pauseBtn.style.display='none';
+  pauseBtn.classList.remove('resumed');
+  pauseBtn.innerHTML='<span style="display:inline-flex;align-items:center;vertical-align:middle"><svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><rect x="6" y="4" width="4" height="16" rx="1"/><rect x="14" y="4" width="4" height="16" rx="1"/></svg></span> Pause';
   document.getElementById('timerLabel').textContent='Saved! ('+formatDuration(dur)+')';
   renderCategories();
 }
@@ -1031,10 +1209,12 @@ function formatDuration(sec){
 function showReport(type,btn){
   document.querySelectorAll('.report-tabs button').forEach(b=>b.classList.remove('active'));
   if(btn)btn.classList.add('active');
+  document.getElementById('customRange').style.display=(type==='custom')?'flex':'none';
   const today=new Date();
   let sessions=[];
   let title='';
   let availableSec=0;
+  let compareRow='';
   if(type==='daily'){
     const todayStr=today.toLocaleDateString('en-US');
     sessions=state.sessions.filter(s=>s.dateStr===todayStr);
@@ -1050,11 +1230,42 @@ function showReport(type,btn){
     // window, not a fixed 7*24h -- if you only started 2 days ago, the
     // window you actually "had" is 2 days, not 7.
     availableSec=sessions.length?Math.max(1,Math.round((today-new Date(Math.min(...sessions.map(s=>new Date(s.date))))) /1000)):0;
-  }else{
+    // Week-over-week comparison against the 7 days directly before this window.
+    const prevStart=new Date(today);prevStart.setDate(prevStart.getDate()-14);
+    const prevEnd=weekAgo;
+    const prevTotal=state.sessions.filter(s=>{const d=new Date(s.date);return d>=prevStart&&d<prevEnd;}).reduce((a,s)=>a+s.duration,0);
+    const curTotal=sessions.reduce((a,s)=>a+s.duration,0);
+    let cmpVal;
+    if(prevTotal>0){
+      const change=Math.round((curTotal-prevTotal)/prevTotal*100);
+      cmpVal=(change>0?'+':'')+change+'%';
+    }else if(curTotal>0){
+      cmpVal='New';
+    }else{
+      cmpVal='—';
+    }
+    compareRow='<div class="report-row"><span>vs Last Week</span><span class="val">'+cmpVal+'</span></div>';
+  }else if(type==='monthly'){
     const monthAgo=new Date(today);monthAgo.setDate(monthAgo.getDate()-30);
     sessions=state.sessions.filter(s=>new Date(s.date)>=monthAgo);
     title='Last 30 Days';
     availableSec=sessions.length?Math.max(1,Math.round((today-new Date(Math.min(...sessions.map(s=>new Date(s.date))))) /1000)):0;
+  }else{
+    // custom range
+    const fromEl=document.getElementById('reportFrom'),toEl=document.getElementById('reportTo');
+    if(!fromEl.value){
+      const d=new Date(today);d.setDate(d.getDate()-7);
+      fromEl.value=d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
+    }
+    if(!toEl.value){
+      toEl.value=today.getFullYear()+'-'+String(today.getMonth()+1).padStart(2,'0')+'-'+String(today.getDate()).padStart(2,'0');
+    }
+    const fp=fromEl.value.split('-').map(Number),tp=toEl.value.split('-').map(Number);
+    const fromDate=new Date(fp[0],fp[1]-1,fp[2],0,0,0);
+    const toDate=new Date(tp[0],tp[1]-1,tp[2],23,59,59);
+    sessions=state.sessions.filter(s=>{const d=new Date(s.date);return d>=fromDate&&d<=toDate;});
+    title=fromEl.value+' to '+toEl.value;
+    availableSec=Math.max(1,Math.round((toDate-fromDate)/1000));
   }
   const total=sessions.reduce((a,s)=>a+s.duration,0);
   const byCat={};
@@ -1067,6 +1278,7 @@ function showReport(type,btn){
   html+='<div class="report-row"><span>Total Time</span><span class="val">'+formatDuration(total)+'</span></div>';
   html+='<div class="report-row"><span>Session Count</span><span class="val">'+sessions.length+'</span></div>';
   html+='<div class="report-row"><span>Time Utilized</span><span class="val">'+(availableSec>0?Math.round(total/availableSec*100):0)+'%</span></div>';
+  html+=compareRow;
   html+='</div><div class="report-card"><h3> By Category</h3><div class="bar-chart">';
   let i=0;
   for(const[cat,dur] of Object.entries(byCat)){
@@ -1089,14 +1301,53 @@ function showReport(type,btn){
 }
 
 // ===== HISTORY =====
+let editingSessionId=null;
 function renderHistory(){
   const list=document.getElementById('historyList');
   const recent=state.sessions.slice(-20).reverse();
   if(!recent.length){list.innerHTML='<div class="empty">No activity recorded</div>';return;}
   list.innerHTML=recent.map((s,i)=>{
     const idx=state.sessions.length-1-i;
-    return '<div class="history-item"><div class="info"><div>'+escapeHtml(s.category)+'</div><div class="cat">'+s.dateStr+' '+s.timeStr+'</div></div><span class="dur">'+formatDuration(s.duration)+'</span><button class="del-h" onclick="deleteSession('+idx+')"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button></div>';
+    if(s.id&&s.id===editingSessionId){
+      const h=Math.floor(s.duration/3600),m=Math.round((s.duration%3600)/60);
+      const catOptions=state.categories.map(c=>'<option value="'+escapeHtml(c)+'"'+(c===s.category?' selected':'')+'>'+escapeHtml(c)+'</option>').join('');
+      return '<div class="edit-row">'+
+        '<select id="editCat-'+s.id+'" class="fb-input">'+catOptions+'</select>'+
+        '<div style="display:flex;gap:8px">'+
+          '<input type="number" id="editH-'+s.id+'" class="fb-input" min="0" value="'+h+'" placeholder="Hours" style="text-align:center">'+
+          '<input type="number" id="editM-'+s.id+'" class="fb-input" min="0" max="59" value="'+m+'" placeholder="Minutes" style="text-align:center">'+
+        '</div>'+
+        '<div class="edit-actions">'+
+          '<button class="fb-btn" onclick="saveEditSession(\''+s.id+'\')">Save</button>'+
+          '<button class="fb-btn" onclick="cancelEditSession()">Cancel</button>'+
+        '</div>'+
+      '</div>';
+    }
+    const editAttr=s.id?"editSession('"+s.id+"')":"alert('This older session can\'t be edited — delete and re-add it instead.')";
+    return '<div class="history-item"><div class="info"><div>'+escapeHtml(s.category)+'</div><div class="cat">'+s.dateStr+' '+s.timeStr+'</div>'+(s.timeStr==='manual entry'?'<div class="session-note">manually added</div>':'')+'</div><span class="dur">'+formatDuration(s.duration)+'</span><div class="hist-actions"><button class="del-h" onclick="'+editAttr+'"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 013 3L7 19l-4 1 1-4L16.5 3.5z"/></svg></button><button class="del-h" onclick="deleteSession('+idx+')"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button></div></div>';
   }).join('');
+}
+function editSession(id){
+  editingSessionId=id;
+  renderHistory();
+}
+function cancelEditSession(){
+  editingSessionId=null;
+  renderHistory();
+}
+function saveEditSession(id){
+  const s=state.sessions.find(x=>x.id===id);
+  if(!s)return;
+  const cat=document.getElementById('editCat-'+id).value;
+  const h=parseInt(document.getElementById('editH-'+id).value)||0;
+  const m=parseInt(document.getElementById('editM-'+id).value)||0;
+  const dur=h*3600+m*60;
+  if(dur<=0){alert('Duration must be greater than 0');return;}
+  s.category=cat;
+  s.duration=dur;
+  editingSessionId=null;
+  saveState();
+  renderHistory();renderCategories();
 }
 let lastDeleted=null,undoTimer=null;
 function showUndoToast(label){
@@ -1187,6 +1438,60 @@ function renderDataStats(){
     '<div class="report-row"><span>Total Time</span><span class="val">'+formatDuration(total)+'</span></div>'+
     '<div class="report-row"><span>Daily Average</span><span class="val">'+formatDuration(days>0?Math.round(total/days):0)+'</span></div>'+
     '<div class="report-row"><span>Categories</span><span class="val">'+state.categories.length+'</span></div>';
+  renderHeatmap();
+  renderBackups();
+}
+function renderBackups(){
+  const el=document.getElementById('backupList');
+  if(!el)return;
+  let backups=[];
+  try{backups=JSON.parse(localStorage.getItem('timetracker_backups')||'[]');}catch(e){}
+  if(!backups.length){el.innerHTML='<div class="empty">No backups yet — one is taken automatically about once a day</div>';return;}
+  el.innerHTML=backups.map((b,idx)=>{
+    const d=new Date(b.ts);
+    const label=d.toLocaleDateString('en-US')+' '+d.toLocaleTimeString('en-US',{hour:'2-digit',minute:'2-digit'});
+    return '<div class="report-row"><span>'+label+'</span><button class="fb-btn" style="flex:0 0 auto;padding:6px 12px" onclick="restoreBackup('+idx+')">Restore</button></div>';
+  }).reverse().join('');
+}
+function restoreBackup(idx){
+  let backups=[];
+  try{backups=JSON.parse(localStorage.getItem('timetracker_backups')||'[]');}catch(e){return;}
+  const b=backups[idx];
+  if(!b)return;
+  if(!confirm('Restore the backup from '+new Date(b.ts).toLocaleString('en-US')+'? Your current data will be saved as a backup first, so this is safe to undo.'))return;
+  maybeBackup(true); // snapshot current state first so restoring is itself reversible
+  state=b.data;
+  saveState();
+  renderCategories();renderHistory();renderDataStats();
+  alert('Restored.');
+}
+function renderHeatmap(){
+  const el=document.getElementById('heatmap');
+  if(!el)return;
+  const totalDays=91; // ~13 weeks
+  const today=new Date();today.setHours(0,0,0,0);
+  const start=new Date(today);
+  start.setDate(start.getDate()-(totalDays-1));
+  start.setDate(start.getDate()-start.getDay()); // snap back to a Sunday so weeks align in columns
+  const byDate={};
+  state.sessions.forEach(s=>{
+    const d=new Date(s.date);d.setHours(0,0,0,0);
+    const key=d.toDateString();
+    byDate[key]=(byDate[key]||0)+s.duration;
+  });
+  const maxDur=Math.max(...Object.values(byDate),1);
+  const spanDays=Math.round((today-start)/86400000)+1;
+  let cells=[];
+  for(let i=0;i<spanDays;i++){
+    const d=new Date(start);d.setDate(d.getDate()+i);
+    if(d>today){cells.push('<div class="heatmap-cell" style="visibility:hidden"></div>');continue;}
+    const key=d.toDateString();
+    const dur=byDate[key]||0;
+    const op=dur>0?(0.15+dur/maxDur*0.85):0.06;
+    const label=d.toLocaleDateString('en-US',{month:'short',day:'numeric'})+' — '+(dur>0?formatDuration(dur):'no activity');
+    cells.push('<div class="heatmap-cell" title="'+label+'" style="background:rgba(232,224,212,'+op+')"></div>');
+  }
+  el.innerHTML=cells.join('');
 }
 
 // ===== JALAALI.JS LIBRARY (MIT License) =====
@@ -1560,6 +1865,12 @@ module.exports = require('./index.js');
 
 // ===== INIT =====
 renderCategories();
+(function(){
+  const d=new Date();
+  const iso=d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
+  const el=document.getElementById('manualDate');
+  if(el) el.value=iso;
+})();
 
 
 // ===== HELPER FUNCTIONS =====
