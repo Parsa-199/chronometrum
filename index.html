@@ -1,0 +1,1585 @@
+<!DOCTYPE html>
+<html lang="en" dir="ltr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>Chronometrum | ⏱</title>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;600;700;900&family=Vazirmatn:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<style>
+/* ===== BAROQUE FOUNDATIONS ===== */
+*{margin:0;padding:0;box-sizing:border-box}
+
+/* Elegant scrollbar */
+::-webkit-scrollbar{width:8px}
+::-webkit-scrollbar-track{background:#0a0a0a}
+::-webkit-scrollbar-thumb{background:linear-gradient(180deg,#e8e0d4,#111111);border-radius:4px}
+::-webkit-scrollbar-thumb:hover{background:linear-gradient(180deg,#e8e0d4,#d0c8bc)}
+
+body{
+  font-family:'Playfair Display',Georgia,serif;
+  color:#e8e0d4;
+  min-height:100vh;
+  padding:8px;
+  border-radius:16px;
+  /* Deep damask-like background */
+  background:#000000;
+  background:#000000;
+}
+
+/* ===== ORNAMENTAL DIVIDER ===== */
+.ornament-divider{
+  text-align:center;
+  margin:12px 0;
+  position:relative;
+  height:20px;
+}
+.ornament-divider::before{
+  content:'· · ·';
+  color:#e8e0d4;
+  font-size:16px;
+  letter-spacing:8px;
+  opacity:0.6;
+}
+.ornament-divider::after{
+  content:'';
+  position:absolute;
+  top:50%;
+  left:0;right:0;
+  height:1px;
+  background:linear-gradient(90deg,transparent,#e8e0d4 20%,#e8e0d4 80%,transparent);
+  opacity:0.2;
+  z-index:-1;
+}
+
+/* ===== GOLD ORNAMENTAL BORDER MIXIN ===== */
+.baroque-frame{
+  border:1px solid rgba(232,224,212,0.25);
+  border-radius:16px;
+  position:relative;
+  background:#111111;
+  box-shadow:
+    0 0 15px rgba(232,224,212,0.05),
+    inset 0 1px 0 rgba(232,224,212,0.1),
+    inset 0 -1px 0 rgba(232,224,212,0.05);
+}
+.baroque-frame::before{
+  content:'';
+  position:absolute;
+  inset:3px;
+  border:1px solid rgba(232,224,212,0.08);
+  border-radius:12px;
+  pointer-events:none;
+}
+
+/* ===== HEADER ===== */
+.header{
+  background:#000000;
+  padding:20px 16px;
+  text-align:center;
+  border-bottom:2px solid rgba(232,224,212,0.4);
+  position:relative;
+  overflow:hidden;
+  border-radius:12px 12px 0 0;
+}
+.header::before{
+  content:'';
+  position:absolute;
+  inset:0;
+  background:
+    radial-gradient(ellipse at 20% 50%, rgba(232,224,212,0.08) 0%, transparent 50%),
+    radial-gradient(ellipse at 80% 50%, rgba(208,200,188,0.06) 0%, transparent 50%);
+  pointer-events:none;
+}
+.header::after{
+  content:'';
+  position:absolute;
+  bottom:6px;
+  left:50%;
+  transform:translateX(-50%);
+  color:#e8e0d4;
+  font-size:8px;
+  letter-spacing:12px;
+  opacity:0.4;
+}
+.header h1{
+  font-family:'Playfair Display',Georgia,serif;
+  font-size:24px;
+  font-weight:700;
+  color:#e8e0d4;
+  text-shadow:0 0 20px rgba(232,224,212,0.3),0 2px 4px rgba(0,0,0,0.5);
+  letter-spacing:1px;
+}
+.header .sub{
+  font-size:12px;
+  color:rgba(232,224,212,0.5);
+  margin-top:4px;
+  font-weight:300;
+}
+
+/* ===== NAVIGATION ===== */
+.nav{
+  display:flex;
+  background:#000000;
+  border-bottom:1px solid rgba(232,224,212,0.15);
+  overflow-x:auto;
+  position:relative;
+  border-radius:0 0 12px 12px;
+}
+.nav::after{
+  content:'';
+  position:absolute;
+  bottom:0;left:0;right:0;
+  height:1px;
+  background:linear-gradient(90deg,transparent,rgba(232,224,212,0.2) 20%,rgba(232,224,212,0.3) 50%,rgba(232,224,212,0.2) 80%,transparent);
+}
+.nav button{
+  flex:1;
+  padding:13px 8px;
+  background:none;
+  border:none;
+  color:rgba(232,224,212,0.45);
+  font-size:13px;
+  font-family:'Playfair Display',Georgia,serif;
+  font-weight:500;
+  cursor:pointer;
+  border-bottom:2px solid transparent;
+  white-space:nowrap;
+  transition:all 0.3s ease;
+  position:relative;
+}
+.nav button:hover{
+  color:#e8e0d4;
+  background:rgba(232,224,212,0.05);
+}
+.nav button.active{
+  color:#e8e0d4;
+  border-bottom-color:#e8e0d4;
+  background:rgba(232,224,212,0.08);
+}
+
+/* ===== PAGES ===== */
+.page{display:none;padding:16px;max-width:700px;margin:0 auto}
+.page.active{display:block}
+
+/* ===== SECTION HEADINGS ===== */
+.section-heading{
+  font-family:'Playfair Display',Georgia,serif;
+  font-size:16px;
+  font-weight:700;
+  color:#e8e0d4;
+  margin-bottom:10px;
+  text-shadow:0 1px 3px rgba(0,0,0,0.5);
+  position:relative;
+  padding-right:4px;
+}
+.section-heading::after{
+  content:'';
+  display:block;
+  width:50px;
+  height:2px;
+  background:linear-gradient(90deg,#e8e0d4,transparent);
+  margin-top:4px;
+}
+
+/* ===== TIMER ===== */
+.timer-box{
+  background:#111111;
+  border:1px solid rgba(232,224,212,0.3);
+  border-radius:20px;
+  padding:28px 24px;
+  text-align:center;
+  margin:12px 0;
+  position:relative;
+  box-shadow:
+    0 0 30px rgba(232,224,212,0.06),
+    0 8px 32px rgba(0,0,0,0.4),
+    inset 0 1px 0 rgba(232,224,212,0.15),
+    inset 0 -1px 0 rgba(232,224,212,0.08);
+}
+.timer-box::before{
+  content:'';
+  position:absolute;
+  inset:4px;
+  border:1px solid rgba(232,224,212,0.08);
+  border-radius:16px;
+  pointer-events:none;
+}
+.timer-box::after{
+  content:'';
+  position:absolute;
+  top:6px;
+  left:50%;
+  transform:translateX(-50%);
+  color:rgba(232,224,212,0.2);
+  font-size:14px;
+}
+.timer-display{
+  font-family:'Playfair Display',Georgia,'Courier New',monospace;
+  font-size:52px;
+  font-weight:900;
+  color:#e8e0d4;
+  font-variant-numeric:tabular-nums;
+  direction:ltr;
+  text-shadow:
+    0 0 20px rgba(232,224,212,0.25),
+    0 2px 8px rgba(0,0,0,0.6),
+    0 0 40px rgba(208,200,188,0.1);
+  letter-spacing:4px;
+  margin:10px 0;
+}
+.timer-label{
+  font-size:13px;
+  color:rgba(232,224,212,0.5);
+  margin-top:4px;
+  font-weight:300;
+}
+
+/* ===== CATEGORY SELECT ===== */
+.cat-select{
+  width:100%;
+  padding:12px 16px;
+  border-radius:14px;
+  background:#111111;
+  color:#e8e0d4;
+  border:1px solid rgba(232,224,212,0.2);
+  font-size:14px;
+  font-family:'Playfair Display',Georgia,serif;
+  margin:8px 0;
+  text-align:left;
+  direction:ltr;
+  appearance:none;
+  -webkit-appearance:none;
+  cursor:pointer;
+  transition:border-color 0.3s;
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%23d4a853' stroke-width='1.5' fill='none'/%3E%3C/svg%3E");
+  background-repeat:no-repeat;
+  background-position:20px center;
+}
+.cat-select:focus{
+  outline:none;
+  border-color:rgba(232,224,212,0.5);
+  box-shadow:0 0 12px rgba(232,224,212,0.1);
+}
+.cat-select option{text-align:center;background:#000000;color:#e8e0d4}
+
+/* ===== START BUTTON ===== */
+.start-btn{
+  width:100%;
+  padding:16px;
+  border-radius:16px;
+  border:none;
+  font-size:22px;
+  font-weight:700;
+  font-family:'Playfair Display',Georgia,serif;
+  cursor:pointer;
+  margin-top:14px;
+  transition:all 0.3s ease;
+  letter-spacing:0.5px;
+  position:relative;
+  overflow:hidden;
+}
+.start-btn::after{
+  content:'';
+  position:absolute;
+  inset:0;
+  background:linear-gradient(180deg,rgba(255,255,255,0.1) 0%,transparent 50%);
+  pointer-events:none;
+}
+.start-btn.start{
+  background:linear-gradient(145deg,#d0c8bc,#e8e0d4,#e8e0d4);
+  color:#000000;
+  box-shadow:0 4px 16px rgba(208,200,188,0.3),inset 0 1px 0 rgba(255,255,255,0.2);
+}
+.start-btn.start:hover{
+  background:linear-gradient(145deg,#e8e0d4,#e8e0d4,#e8e0d4);
+  box-shadow:0 4px 24px rgba(232,224,212,0.4),inset 0 1px 0 rgba(255,255,255,0.2);
+  transform:translateY(-1px);
+}
+.start-btn.stop{
+  background:linear-gradient(145deg,#111111,#111111,#e8e0d4);
+  color:#e8e0d4;
+  box-shadow:0 4px 16px rgba(17,17,17,0.3),inset 0 1px 0 rgba(255,255,255,0.15);
+}
+.start-btn.stop:hover{
+  box-shadow:0 4px 24px rgba(232,224,212,0.4),inset 0 1px 0 rgba(255,255,255,0.15);
+  transform:translateY(-1px);
+}
+.start-btn:active{transform:scale(0.98)!important}
+
+/* ===== CATEGORIES LIST ===== */
+.cat-list{margin:12px 0}
+.cat-item{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  background:#111111;
+  border:1px solid rgba(232,224,212,0.12);
+  border-radius:14px;
+  padding:12px 16px;
+  margin:6px 0;
+  transition:border-color 0.3s;
+  direction:ltr;
+}
+.cat-item:hover{
+  border-color:rgba(232,224,212,0.3);
+}
+.cat-item.selected{
+  border-color:rgba(232,224,212,0.6);
+  box-shadow:0 0 12px rgba(232,224,212,0.15),inset 0 0 8px rgba(232,224,212,0.05);
+  background:rgba(232,224,212,0.06);
+}
+.cat-item.selectable{cursor:pointer;}
+.cat-item.selectable:hover{
+  border-color:rgba(232,224,212,0.25);
+}
+.cat-item .name{font-size:14px;color:#e8e0d4}
+.cat-item .time{font-size:13px;color:#e8e0d4;font-weight:500}
+.cat-item .del{
+  background:rgba(232,224,212,0.08);
+  color:#e8e0d4;
+  border:1px solid rgba(232,224,212,0.15);
+  border-radius:8px;
+  padding:4px 10px;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  min-width:28px;
+  min-height:28px;
+  cursor:pointer;
+  font-size:12px;
+  font-family:'Playfair Display',Georgia,serif;
+  transition:all 0.2s;
+}
+.cat-item .del:hover{
+  background:rgba(232,224,212,0.15);
+  border-color:rgba(232,224,212,0.3);
+}
+
+/* ===== ADD CATEGORY ===== */
+.add-cat{
+  display:flex;
+  gap:8px;
+  margin:16px 0 8px;
+  padding:12px 14px;
+  background:#111111;
+  border:1px solid rgba(232,224,212,0.1);
+  border-radius:14px;
+}
+.add-cat input{
+  flex:1;
+  padding:10px 14px;
+  border-radius:10px;
+  background:#0a0a0a;
+  color:#e8e0d4;
+  border:1px solid rgba(232,224,212,0.12);
+  font-size:14px;
+  font-family:'Courier New',monospace;
+  transition:border-color 0.3s;
+  direction:ltr;
+  cursor:text;
+}
+.add-cat input:focus{
+  outline:none;
+  border-color:rgba(232,224,212,0.4);
+}
+.add-cat input::placeholder{color:rgba(232,224,212,0.25)}
+.add-cat button{
+  padding:10px 16px;
+  border-radius:10px;
+  background:rgba(232,224,212,0.08);
+  color:#e8e0d4;
+  border:1px solid rgba(232,224,212,0.15);
+  font-weight:700;
+  font-family:'Courier New',monospace;
+  cursor:pointer;
+  font-size:16px;
+  transition:all 0.2s;
+}
+.add-cat button:hover{
+  background:rgba(232,224,212,0.15);
+  border-color:rgba(232,224,212,0.3);
+}
+.add-cat button:active{transform:scale(0.97)}
+
+/* ===== REPORTS ===== */
+.report-tabs{display:flex;gap:6px;margin:12px 0}
+.report-tabs button{
+  flex:1;
+  padding:9px;
+  border-radius:12px;
+  background:#111111;
+  color:rgba(232,224,212,0.4);
+  border:1px solid rgba(232,224,212,0.1);
+  font-size:13px;
+  font-family:'Playfair Display',Georgia,serif;
+  font-weight:500;
+  cursor:pointer;
+  transition:all 0.3s;
+}
+.report-tabs button:hover{
+  color:#e8e0d4;
+  border-color:rgba(232,224,212,0.2);
+}
+.report-tabs button.active{
+  background:rgba(232,224,212,0.1);
+  color:#e8e0d4;
+  border-color:rgba(232,224,212,0.4);
+  box-shadow:0 0 12px rgba(232,224,212,0.06);
+}
+
+.report-card{
+  background:#111111;
+  border:1px solid rgba(232,224,212,0.15);
+  border-radius:16px;
+  padding:16px;
+  margin:8px 0;
+  position:relative;
+  box-shadow:0 4px 16px rgba(0,0,0,0.2);
+}
+.report-card::before{
+  content:'';
+  position:absolute;
+  top:0;left:0;right:0;
+  height:1px;
+  background:linear-gradient(90deg,transparent,rgba(232,224,212,0.2),transparent);
+}
+.report-card h3{
+  font-family:'Playfair Display','Vazirmatn',serif;
+  font-size:14px;
+  color:#e8e0d4;
+  margin-bottom:10px;
+  font-weight:600;
+  text-shadow:0 1px 2px rgba(0,0,0,0.4);
+}
+
+.report-row{
+  display:flex;
+  justify-content:space-between;
+  padding:8px 0;
+  border-bottom:1px solid rgba(232,224,212,0.06);
+  font-size:13px;
+}
+.report-row:last-child{border:none}
+.report-row .val{
+  color:#e8e0d4;
+  font-weight:600;
+}
+
+/* ===== BAR CHART ===== */
+.bar-chart{margin:12px 0}
+.bar-row{
+  display:flex;
+  align-items:center;
+  gap:8px;
+  margin:6px 0;
+}
+.bar-label{
+  width:80px;
+  font-size:12px;
+  text-align:left;
+  color:rgba(232,224,212,0.6);
+}
+.bar-track{
+  flex:1;
+  height:20px;
+  background:#111111;
+  border-radius:4px;
+  overflow:hidden;
+  border:1px solid rgba(232,224,212,0.06);
+}
+.bar-fill{
+  height:100%;
+  border-radius:4px;
+  transition:0.3s;
+  position:relative;
+}
+.bar-fill::after{
+  content:'';
+  position:absolute;
+  inset:0;
+  background:linear-gradient(180deg,rgba(255,255,255,0.15) 0%,transparent 50%,rgba(0,0,0,0.1) 100%);
+}
+.bar-pct{
+  font-size:13px;
+  color:#e8e0d4;
+  opacity:0.6;
+  min-width:36px;
+  text-align:left;
+  font-family:'Courier New',monospace;
+}
+.bar-val{
+  width:50px;
+  font-size:11px;
+  text-align:center;
+  color:rgba(232,224,212,0.6);
+}
+
+/* ===== EXPORT/IMPORT ===== */
+.export-btns{
+  display:flex;
+  gap:10px;
+  margin:16px 0;
+}
+.export-btns button{
+  flex:1;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  gap:8px;
+  padding:14px 16px;
+  border-radius:12px;
+  border:1px solid rgba(232,224,212,0.15);
+  background:#111111;
+  color:#e8e0d4;
+  font-size:13px;
+  font-family:'Courier New',monospace;
+  font-weight:500;
+  cursor:pointer;
+  transition:all 0.2s;
+}
+.export-btns button:hover{
+  background:#1a1a1a;
+  border-color:rgba(232,224,212,0.35);
+}
+.export-btns button:active{
+  transform:scale(0.98);
+}
+
+/* ===== HISTORY ===== */
+.history-item{
+  background:#111111;
+  border:1px solid rgba(232,224,212,0.1);
+  border-radius:14px;
+  padding:12px 14px;
+  margin:6px 0;
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  transition:border-color 0.3s;
+  direction:ltr;
+}
+.history-item:hover{
+  border-color:rgba(232,224,212,0.2);
+}
+.history-item .info{font-size:13px}
+.history-item .cat{color:rgba(232,224,212,0.6);font-size:12px}
+.history-item .dur{
+  font-size:15px;
+  font-weight:600;
+  color:#e8e0d4;
+  font-family:'Playfair Display','Vazirmatn',serif;
+}
+.history-item .del-h{
+  background:none;
+  border:none;
+  color:rgba(232,224,212,0.4);
+  font-size:16px;
+  cursor:pointer;
+  transition:color 0.2s;
+}
+.history-item .del-h:hover{color:#e8e0d4}
+
+.empty{
+  text-align:center;
+  color:rgba(232,224,212,0.2);
+  font-size:14px;
+  padding:20px;
+  font-style:italic;
+}
+
+/* ===== MOBILE ===== */
+@media(max-width:480px){
+  .timer-display{font-size:38px;letter-spacing:2px}
+  .header h1{font-size:20px}
+  .timer-box{padding:20px 16px}
+}
+
+
+
+/* ===== FIREBASE SYNC ===== */
+.fb-input{
+  flex:1;
+  min-width:120px;
+  padding:10px 12px;
+  border-radius:10px;
+  background:#0a0a0a;
+  color:#e8e0d4;
+  border:1px solid rgba(232,224,212,0.12);
+  font-size:12px;
+  font-family:'Courier New',monospace;
+  direction:ltr;
+  transition:border-color 0.3s;
+}
+.fb-input:focus{
+  outline:none;
+  border-color:rgba(232,224,212,0.4);
+}
+.fb-input::placeholder{color:rgba(232,224,212,0.25)}
+.fb-btn{
+  flex:1;
+  padding:10px 14px;
+  border-radius:10px;
+  background:rgba(232,224,212,0.06);
+  color:#e8e0d4;
+  border:1px solid rgba(232,224,212,0.12);
+  font-size:12px;
+  font-family:'Courier New',monospace;
+  cursor:pointer;
+  transition:all 0.2s;
+}
+.fb-btn:hover{
+  background:rgba(232,224,212,0.12);
+  border-color:rgba(232,224,212,0.3);
+}
+.fb-btn:active{transform:scale(0.97)}
+
+/* ===== LIVE CLOCK ===== */
+.live-clock{
+  display:flex;
+  align-items:baseline;
+  justify-content:center;
+  gap:4px;
+}
+.clock-time{font-family:'Courier New',monospace;font-size:28px;font-weight:700;letter-spacing:4px;}
+
+.day-display{font-family:'Playfair Display',Georgia,serif;font-size:22px;color:#e8e0d4;opacity:0.45;text-align:center;letter-spacing:1px;margin-top:2px;}
+
+.clock-ampm{font-size:12px;font-family:'Courier New',monospace;opacity:0.5;transform:translateY(2px);}
+.live-date{
+  font-family:'Playfair Display',Georgia,serif;
+  font-size:12px;
+  color:#e8e0d4;
+  opacity:0.4;
+  text-align:center;
+  letter-spacing:1px;
+}
+
+/* ===== CANDLELIGHT VIGNETTE OVERLAY ===== */
+body::before{
+  content:'';
+  position:fixed;
+  inset:0;
+  background:
+    radial-gradient(ellipse at 50% 20%, rgba(232,224,212,0.03) 0%, transparent 60%),
+    radial-gradient(ellipse at 50% 80%, rgba(10,10,10,0.5) 0%, transparent 60%);
+  pointer-events:none;
+  z-index:9999;
+}
+
+/* ===== GOLD ACCENT LINE ===== */
+.gold-line{
+  height:1px;
+  background:linear-gradient(90deg,transparent,rgba(232,224,212,0.3),transparent);
+  margin:8px 0;
+}
+
+/* ===== GREEK MYTHOLOGY SVG ELEMENTS ===== */
+.laurel-left, .laurel-right {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 50px;
+  height: 100px;
+  pointer-events: none;
+}
+.laurel-left { right: 8px; }
+.laurel-right { left: 8px; }
+.medusa-emblem {
+  width: 60px;
+  height: 60px;
+  margin: 0 auto 4px;
+  display: block;
+}
+.greek-key {
+  width: 100%;
+  height: 16px;
+  margin: 4px 0;
+}
+.greek-column {
+  position: fixed;
+  top: 10%;
+  height: 80%;
+  pointer-events: none;
+  opacity: 0.5;
+}
+.greek-column.left { left: 4px; }
+.greek-column.right { right: 4px; }
+@media(max-width: 600px) {
+  .greek-column { display: none; }
+  .laurel-left, .laurel-right { width: 35px; height: 70px; }
+}
+</style>
+</head>
+<body>
+<div class="header">
+<div style="display:flex;align-items:center;justify-content:center;gap:8px"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#e8e0d4" stroke-width="1.5"><circle cx="12" cy="12" r="10"/><polyline points="12,6 12,12 16,14"/></svg><h1>Chronometrum</h1></div>
+<div class="day-display" id="dayDisplay"></div>
+</div>
+<svg class="greek-key" viewBox="0 0 200 16" xmlns="http://www.w3.org/2000/svg">
+  <path d="M0,8 L8,8 L8,0 L16,0 L16,8 L24,8 L24,16 L32,16 L32,8 L40,8 L40,0 L48,0 L48,8 L56,8 L56,16 L64,16 L64,8 L72,8 L72,0 L80,0 L80,8 L88,8 L88,16 L96,16 L96,8 L104,8 L104,0 L112,0 L112,8 L120,8 L120,16 L128,16 L128,8 L136,8 L136,0 L144,0 L144,8 L152,8 L152,16 L160,16 L160,8 L168,8 L168,0 L176,0 L176,8 L184,8 L184,16 L192,16 L192,8 L200,8" 
+    stroke="#e8e0d4" stroke-width="1" fill="none" opacity="0.15"/>
+</svg>
+<div class="nav">
+<button class="active" onclick="showPage('timer')"><span style="display:inline-flex;align-items:center;vertical-align:middle"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12,6 12,12 16,14"/></svg></span> Timer</button>
+<button onclick="showPage('reports')"><span style="display:inline-flex;align-items:center;vertical-align:middle"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="12" width="4" height="9"/><rect x="10" y="7" width="4" height="14"/><rect x="17" y="3" width="4" height="18"/></svg></span> Reports</button>
+<button onclick="showPage('history')"><span style="display:inline-flex;align-items:center;vertical-align:middle"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><circle cx="4" cy="6" r="1" fill="currentColor"/><circle cx="4" cy="12" r="1" fill="currentColor"/><circle cx="4" cy="18" r="1" fill="currentColor"/></svg></span> History</button>
+<button onclick="showPage('data')"><span style="display:inline-flex;align-items:center;vertical-align:middle"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 21H5a2 2 0 01-2-2V5a2 2 0 012-2h11l5 5v11a2 2 0 01-2 2z"/><polyline points="17,21 17,13 7,13 7,21"/><polyline points="7,3 7,8 15,8"/></svg></span> Data</button>
+</div>
+
+<div class="greek-column left"><svg  viewBox="0 0 30 200" xmlns="http://www.w3.org/2000/svg">
+  <!-- Capital -->
+  <rect x="5" y="0" width="20" height="4" stroke="#e8e0d4" stroke-width="0.5" fill="none" opacity="0.15"/>
+  <rect x="3" y="4" width="24" height="3" stroke="#e8e0d4" stroke-width="0.5" fill="none" opacity="0.12"/>
+  <!-- Shaft flutes -->
+  <line x1="8" y1="7" x2="8" y2="190" stroke="#e8e0d4" stroke-width="0.3" opacity="0.08"/>
+  <line x1="12" y1="7" x2="12" y2="190" stroke="#e8e0d4" stroke-width="0.3" opacity="0.08"/>
+  <line x1="15" y1="7" x2="15" y2="190" stroke="#e8e0d4" stroke-width="0.3" opacity="0.08"/>
+  <line x1="18" y1="7" x2="18" y2="190" stroke="#e8e0d4" stroke-width="0.3" opacity="0.08"/>
+  <line x1="22" y1="7" x2="22" y2="190" stroke="#e8e0d4" stroke-width="0.3" opacity="0.08"/>
+  <!-- Shaft outline -->
+  <rect x="6" y="7" width="18" height="183" stroke="#e8e0d4" stroke-width="0.5" fill="none" opacity="0.1"/>
+  <!-- Base -->
+  <rect x="3" y="190" width="24" height="3" stroke="#e8e0d4" stroke-width="0.5" fill="none" opacity="0.12"/>
+  <rect x="5" y="193" width="20" height="4" stroke="#e8e0d4" stroke-width="0.5" fill="none" opacity="0.15"/>
+</svg></div>
+<div class="greek-column right"><svg  viewBox="0 0 30 200" xmlns="http://www.w3.org/2000/svg">
+  <!-- Capital -->
+  <rect x="5" y="0" width="20" height="4" stroke="#e8e0d4" stroke-width="0.5" fill="none" opacity="0.15"/>
+  <rect x="3" y="4" width="24" height="3" stroke="#e8e0d4" stroke-width="0.5" fill="none" opacity="0.12"/>
+  <!-- Shaft flutes -->
+  <line x1="8" y1="7" x2="8" y2="190" stroke="#e8e0d4" stroke-width="0.3" opacity="0.08"/>
+  <line x1="12" y1="7" x2="12" y2="190" stroke="#e8e0d4" stroke-width="0.3" opacity="0.08"/>
+  <line x1="15" y1="7" x2="15" y2="190" stroke="#e8e0d4" stroke-width="0.3" opacity="0.08"/>
+  <line x1="18" y1="7" x2="18" y2="190" stroke="#e8e0d4" stroke-width="0.3" opacity="0.08"/>
+  <line x1="22" y1="7" x2="22" y2="190" stroke="#e8e0d4" stroke-width="0.3" opacity="0.08"/>
+  <!-- Shaft outline -->
+  <rect x="6" y="7" width="18" height="183" stroke="#e8e0d4" stroke-width="0.5" fill="none" opacity="0.1"/>
+  <!-- Base -->
+  <rect x="3" y="190" width="24" height="3" stroke="#e8e0d4" stroke-width="0.5" fill="none" opacity="0.12"/>
+  <rect x="5" y="193" width="20" height="4" stroke="#e8e0d4" stroke-width="0.5" fill="none" opacity="0.15"/>
+</svg></div>
+<!-- TIMER PAGE -->
+<div class="page active" id="page-timer">
+<div class="timer-box">
+<div class="live-clock" id="liveClock"><span class="clock-time">00:00:00</span><span class="clock-ampm">AM</span></div>
+<div class="live-date" id="liveDate"></div>
+<div class="live-date" id="liveDateJalali" style="opacity:0.35;font-size:11px"></div>
+<svg class="medusa-emblem" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+  <!-- Head -->
+  <circle cx="50" cy="42" r="18" stroke="#e8e0d4" stroke-width="1" fill="none" opacity="0.4"/>
+  <!-- Eyes -->
+  <circle cx="44" cy="40" r="2" fill="#e8e0d4" opacity="0.3"/>
+  <circle cx="56" cy="40" r="2" fill="#e8e0d4" opacity="0.3"/>
+  <!-- Nose -->
+  <line x1="50" y1="42" x2="50" y2="46" stroke="#e8e0d4" stroke-width="0.8" opacity="0.25"/>
+  <!-- Mouth -->
+  <path d="M46 50 Q50 53 54 50" stroke="#e8e0d4" stroke-width="0.8" fill="none" opacity="0.25"/>
+  <!-- Snakes -->
+  <path d="M32 35 Q28 25 35 20 Q32 30 38 28" stroke="#e8e0d4" stroke-width="0.8" fill="none" opacity="0.3"/>
+  <path d="M38 30 Q35 18 42 15 Q40 25 45 22" stroke="#e8e0d4" stroke-width="0.8" fill="none" opacity="0.25"/>
+  <path d="M50 24 Q48 14 50 10 Q52 14 50 24" stroke="#e8e0d4" stroke-width="0.8" fill="none" opacity="0.25"/>
+  <path d="M55 22 Q58 12 65 15 Q60 25 62 28" stroke="#e8e0d4" stroke-width="0.8" fill="none" opacity="0.25"/>
+  <path d="M62 28 Q65 18 72 22 Q65 30 68 35" stroke="#e8e0d4" stroke-width="0.8" fill="none" opacity="0.3"/>
+  <!-- Laurel wreath -->
+  <path d="M25 55 Q20 45 25 35" stroke="#e8e0d4" stroke-width="0.8" fill="none" opacity="0.2"/>
+  <path d="M75 55 Q80 45 75 35" stroke="#e8e0d4" stroke-width="0.8" fill="none" opacity="0.2"/>
+  <!-- Omega below -->
+  <text x="50" y="80" text-anchor="middle" font-family="serif" font-size="16" fill="#e8e0d4" opacity="0.3">Ω</text>
+</svg>
+<svg class="laurel-left" viewBox="0 0 60 120" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <path d="M50 10 Q30 20 25 40 Q20 55 30 70 Q25 55 15 40 Q10 25 30 15 Z" stroke="#e8e0d4" stroke-width="1" fill="none" opacity="0.3"/>
+  <path d="M48 25 Q32 32 28 48 Q24 60 32 72 Q28 60 20 48 Q16 35 35 28 Z" stroke="#e8e0d4" stroke-width="1" fill="none" opacity="0.25"/>
+  <path d="M45 40 Q33 44 30 55 Q27 65 33 74 Q30 65 24 55 Q21 46 36 42 Z" stroke="#e8e0d4" stroke-width="1" fill="none" opacity="0.2"/>
+  <path d="M42 55 Q34 58 32 66 Q30 74 34 80 Q32 74 28 66 Q26 59 36 56 Z" stroke="#e8e0d4" stroke-width="1" fill="none" opacity="0.15"/>
+  <line x1="30" y1="10" x2="30" y2="85" stroke="#e8e0d4" stroke-width="0.8" opacity="0.15"/>
+</svg>
+<svg class="laurel-right" viewBox="0 0 60 120" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <path d="M10 10 Q30 20 35 40 Q40 55 30 70 Q35 55 45 40 Q50 25 30 15 Z" stroke="#e8e0d4" stroke-width="1" fill="none" opacity="0.3"/>
+  <path d="M12 25 Q28 32 32 48 Q36 60 28 72 Q32 60 40 48 Q44 35 25 28 Z" stroke="#e8e0d4" stroke-width="1" fill="none" opacity="0.25"/>
+  <path d="M15 40 Q27 44 30 55 Q33 65 27 74 Q30 65 36 55 Q39 46 24 42 Z" stroke="#e8e0d4" stroke-width="1" fill="none" opacity="0.2"/>
+  <path d="M18 55 Q26 58 28 66 Q30 74 26 80 Q28 74 32 66 Q34 59 24 56 Z" stroke="#e8e0d4" stroke-width="1" fill="none" opacity="0.15"/>
+  <line x1="30" y1="10" x2="30" y2="85" stroke="#e8e0d4" stroke-width="0.8" opacity="0.15"/>
+</svg>
+<div class="timer-display" id="timerDisplay">00:00:00</div>
+<div class="timer-label" id="timerLabel">Ready</div>
+<button class="start-btn start" id="startBtn" onclick="toggleTimer()"><span style="display:inline-flex;align-items:center;vertical-align:middle"><svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><polygon points="5,3 19,12 5,21"/></svg></span> Start</button>
+</div>
+<div style="margin-top:20px">
+<h3 class="section-heading"><span style="display:inline-flex;align-items:center;vertical-align:middle"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20.59 13.41l-7.17 7.17a2 2 0 01-2.83 0L2 12V2h10l8.59 8.59a2 2 0 010 2.82z"/><circle cx="7" cy="7" r="1" fill="currentColor"/></svg></span> Categories</h3>
+<div id="catList" class="cat-list"></div>
+<div class="add-cat">
+<input type="text" id="newCatInput" placeholder="New category..." onkeypress="if(event.key==='Enter')addCategory()">
+<button onclick="addCategory()" style="cursor:pointer"><span style="display:inline-flex;align-items:center;vertical-align:middle"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg></span></button>
+</div>
+</div>
+</div>
+
+<!-- REPORTS PAGE -->
+<div class="page" id="page-reports">
+<div class="report-tabs">
+<button class="active" onclick="showReport('daily',this)">Daily</button>
+<button onclick="showReport('weekly',this)">Weekly</button>
+<button onclick="showReport('monthly',this)">Monthly</button>
+</div>
+<div id="reportContent"></div>
+</div>
+
+<!-- HISTORY PAGE -->
+<div class="page" id="page-history">
+<h3 class="section-heading"><span style="display:inline-flex;align-items:center;vertical-align:middle"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><circle cx="4" cy="6" r="1" fill="currentColor"/><circle cx="4" cy="12" r="1" fill="currentColor"/><circle cx="4" cy="18" r="1" fill="currentColor"/></svg></span> Recent Activity</h3>
+<div id="historyList"></div>
+</div>
+
+<!-- DATA PAGE -->
+<div class="page" id="page-data">
+<h3 class="section-heading"> Data Management</h3>
+<div class="export-btns">
+<button onclick="exportJSON()"><span style="display:inline-flex;align-items:center;vertical-align:middle"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7,10 12,15 17,10"/><line x1="12" y1="15" x2="12" y2="3"/></svg></span> Download JSON</button>
+<button onclick="document.getElementById('fileInput').click()"><span style="display:inline-flex;align-items:center;vertical-align:middle"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="17,8 12,3 7,8"/><line x1="12" y1="3" x2="12" y2="15"/></svg></span> Upload JSON</button>
+<input type="file" id="fileInput" accept=".json" style="display:none" onchange="importJSON(event)">
+</div>
+
+<div class="report-card" style="margin-top:12px">
+<h3 style="font-size:14px;color:#e8e0d4;margin:0 0 8px;opacity:0.7">Cloud Sync (Firebase)</h3>
+<div id="firebaseStatus" style="font-size:12px;color:#e8e0d4;opacity:0.5;margin-bottom:8px">Not connected</div>
+<div style="display:flex;gap:8px;flex-wrap:wrap">
+<input type="text" id="fbProject" class="fb-input" placeholder="Project ID or full Database URL">
+<input type="text" id="fbSecret" class="fb-input" placeholder="Database Secret">
+</div>
+<div style="display:flex;gap:8px;margin-top:10px">
+<button class="fb-btn" onclick="connectFirebase()">Connect</button>
+<button class="fb-btn" onclick="syncToFirebase()">Sync Now</button>
+<button class="fb-btn" onclick="loadFromFirebase()">Load</button>
+</div>
+</div>
+
+<div id="dataStats" class="report-card" style="margin-top:12px"></div>
+</div>
+
+<script>
+// ===== DATA =====
+let state = loadState();
+let timer = null;
+let startTime = null;
+let elapsed = 0;
+let running = false;
+let selectedCat = '';
+
+
+function defaultState(){
+  return {categories:['Scikit-learn','English','Projects','Math'],sessions:[]};
+}
+function loadState(){
+  try{const s=localStorage.getItem('timetracker');return s?JSON.parse(s):defaultState();}
+  catch(e){return defaultState();}
+}
+function saveState(){localStorage.setItem('timetracker',JSON.stringify(state));}
+
+// ===== NAVIGATION =====
+function showPage(id){
+  document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
+  document.querySelectorAll('.nav button').forEach(b=>b.classList.remove('active'));
+  document.getElementById('page-'+id).classList.add('active');
+  document.querySelectorAll('.nav button')[['timer','reports','history','data'].indexOf(id)].classList.add('active');
+  if(id==='reports') showReport('daily',document.querySelector('.report-tabs button'));
+  if(id==='history') renderHistory();
+  if(id==='data') renderDataStats();
+}
+
+// ===== DATE =====
+function updateDate(){
+  const d=new Date();
+  const days=['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+  // day display removed from header
+}
+// updateDate removed - clock shows date
+
+// ===== CATEGORIES =====
+function escapeHtml(str){
+  return String(str).replace(/[&<>"']/g,ch=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch]));
+}
+function renderCategories(){
+
+  const list=document.getElementById('catList');
+  if(!state.categories.length){list.innerHTML='<div class="empty">No categories yet</div>';return;}
+  list.innerHTML=state.categories.map(c=>{
+    const total=state.sessions.filter(s=>s.category===c).reduce((a,s)=>a+s.duration,0);
+    const sel=selectedCat===c?'selected':'';
+    const locked=running?' style="pointer-events:none;opacity:0.5"':'';
+    return '<div class="cat-item selectable '+sel+'"'+locked+' data-cat="'+escapeHtml(c)+'"><span class="name"> '+escapeHtml(c)+'</span><span class="time">'+formatDuration(total)+'</span><button class="del" data-del="'+escapeHtml(c)+'"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button></div>';
+  }).join('');
+}
+document.addEventListener('click',function(e){
+  const delBtn=e.target.closest('[data-del]');
+  if(delBtn){e.stopPropagation();removeCategory(delBtn.getAttribute('data-del'));return;}
+  const item=e.target.closest('[data-cat]');
+  if(item){selectCategory(item.getAttribute('data-cat'));}
+});
+function addCategory(){
+  const input=document.getElementById('newCatInput');
+  const name=input.value.trim();
+  if(!name||state.categories.includes(name))return;
+  state.categories.push(name);
+  saveState();renderCategories();input.value='';
+}
+function selectCategory(name){
+  if(running)return; // don't allow switching categories on an active session
+  selectedCat=(selectedCat===name)?'':name;
+  renderCategories();
+}
+function removeCategory(name){
+  if(!confirm('Delete '+name+'?'))return;
+  if(selectedCat===name) selectedCat='';
+  state.categories=state.categories.filter(c=>c!==name);
+  saveState();renderCategories();
+}
+
+// ===== TIMER =====
+function toggleTimer(){
+  if(running){stopTimer();}else{startTimer();}
+}
+function startTimer(){
+  if(!selectedCat){alert('Select a category first!');return;}
+  running=true;startTime=Date.now()-elapsed*1000;
+  document.getElementById('startBtn').className='start-btn stop';
+  document.getElementById('startBtn').innerHTML='<span style="display:inline-flex;align-items:center;vertical-align:middle"><svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><rect x="4" y="4" width="16" height="16" rx="2"/></svg></span> Stop';
+  document.getElementById('timerLabel').textContent='Working on: '+selectedCat;
+  timer=setInterval(updateTimer,1000);
+}
+function stopTimer(){
+  running=false;clearInterval(timer);
+  
+  const dur=elapsed;
+  if(dur>0&&selectedCat){
+    state.sessions.push({
+      category:selectedCat,
+      duration:dur,
+      date:new Date().toISOString(),
+      dateStr:new Date().toLocaleDateString('en-US'),
+      timeStr:new Date().toLocaleTimeString('en-US',{hour:'2-digit',minute:'2-digit'})
+    });
+    saveState();
+  }
+  elapsed=0;updateTimerDisplay(0);
+  document.getElementById('startBtn').className='start-btn start';
+  document.getElementById('startBtn').innerHTML='<span style="display:inline-flex;align-items:center;vertical-align:middle"><svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><polygon points="5,3 19,12 5,21"/></svg></span> Start';
+  document.getElementById('timerLabel').textContent='Saved! ('+formatDuration(dur)+')';
+  renderCategories();
+}
+function updateTimer(){
+  elapsed=Math.round((Date.now()-startTime)/1000);
+  updateTimerDisplay(elapsed);
+}
+function updateTimerDisplay(sec){
+  const h=Math.floor(sec/3600);
+  const m=Math.floor((sec%3600)/60);
+  const s=sec%60;
+  document.getElementById('timerDisplay').textContent=
+    String(h).padStart(2,'0')+':'+String(m).padStart(2,'0')+':'+String(s).padStart(2,'0');
+}
+function formatDuration(sec){
+  if(sec<60)return sec+' sec';
+  const h=Math.floor(sec/3600);
+  const m=Math.floor((sec%3600)/60);
+  if(h>0)return h+'h '+m+'min';
+  return m+'min';
+}
+
+// ===== REPORTS =====
+function showReport(type,btn){
+  document.querySelectorAll('.report-tabs button').forEach(b=>b.classList.remove('active'));
+  if(btn)btn.classList.add('active');
+  const today=new Date();
+  let sessions=[];
+  let title='';
+  if(type==='daily'){
+    const todayStr=today.toLocaleDateString('en-US');
+    sessions=state.sessions.filter(s=>s.dateStr===todayStr);
+    title='Today';
+  }else if(type==='weekly'){
+    const weekAgo=new Date(today);weekAgo.setDate(weekAgo.getDate()-7);
+    sessions=state.sessions.filter(s=>new Date(s.date)>=weekAgo);
+    title='Last 7 Days';
+  }else{
+    const monthAgo=new Date(today);monthAgo.setDate(monthAgo.getDate()-30);
+    sessions=state.sessions.filter(s=>new Date(s.date)>=monthAgo);
+    title='Last 30 Days';
+  }
+  const total=sessions.reduce((a,s)=>a+s.duration,0);
+  const byCat={};
+  sessions.forEach(s=>{byCat[s.category]=(byCat[s.category]||0)+s.duration;});
+  const maxVal=Math.max(...Object.values(byCat),1);
+  const colors=['#e8e0d4','#c9a86a','#8fa9c9','#a8c99a','#c99a9a','#b39ac9','#9ac9c2'];
+  let html='<div class="report-card"><h3>'+title+'</h3>';
+  html+='<div class="report-row"><span>Total Time</span><span class="val">'+formatDuration(total)+'</span></div>';
+  html+='<div class="report-row"><span>Session Count</span><span class="val">'+sessions.length+'</span></div>';
+  html+='</div><div class="report-card"><h3> By Category</h3><div class="bar-chart">';
+  let i=0;
+  for(const[cat,dur] of Object.entries(byCat)){
+    const pct=maxVal>0?(dur/maxVal*100):0;
+    var pctTotal=total>0?Math.round(dur/total*100):0;
+    html+='<div class="bar-row"><span class="bar-label">'+escapeHtml(cat)+'</span><div class="bar-track"><div class="bar-fill" style="width:'+pct+'%;background:'+colors[i%colors.length]+'"></div></div><span class="bar-val">'+(dur>0?formatDuration(dur):'—')+'</span><span class="bar-pct">'+pctTotal+'%</span></div>';
+    i++;
+  }
+  html+='</div></div>';
+  // Today sessions
+  if(sessions.length){
+    html+='<div class="report-card"><h3> Details</h3>';
+    sessions.slice(-10).reverse().forEach(s=>{
+      html+='<div class="report-row"><span>'+escapeHtml(s.category)+' — '+s.timeStr+'</span><span class="val">'+formatDuration(s.duration)+'</span></div>';
+    });
+    html+='</div>';
+  }
+  document.getElementById('reportContent').innerHTML=html;
+}
+
+// ===== HISTORY =====
+function renderHistory(){
+  const list=document.getElementById('historyList');
+  const recent=state.sessions.slice(-20).reverse();
+  if(!recent.length){list.innerHTML='<div class="empty">No activity recorded</div>';return;}
+  list.innerHTML=recent.map((s,i)=>{
+    const idx=state.sessions.length-1-i;
+    return '<div class="history-item"><div class="info"><div>'+escapeHtml(s.category)+'</div><div class="cat">'+s.dateStr+' '+s.timeStr+'</div></div><span class="dur">'+formatDuration(s.duration)+'</span><button class="del-h" onclick="deleteSession('+idx+')"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button></div>';
+  }).join('');
+}
+function deleteSession(idx){
+  state.sessions.splice(idx,1);saveState();renderHistory();renderCategories();
+}
+
+// ===== EXPORT/IMPORT =====
+function exportJSON(){
+  const blob=new Blob([JSON.stringify(state,null,2)],{type:'application/json'});
+  const url=URL.createObjectURL(blob);
+  const a=document.createElement('a');
+  a.href=url;a.download='timetracker-'+new Date().toISOString().slice(0,10)+'.json';
+  a.click();URL.revokeObjectURL(url);
+}
+function importJSON(e){
+  const file=e.target.files[0];if(!file)return;
+  const reader=new FileReader();
+  reader.onload=function(ev){
+    try{
+      const data=JSON.parse(ev.target.result);
+      if(data.categories&&data.sessions){
+        state=data;saveState();renderCategories();
+        alert('Data loaded! ('+data.sessions.length+' sessions)');
+      }else{alert('Invalid file format!');}
+    }catch(err){alert('Error reading file!');}
+  };
+  reader.readAsText(file);e.target.value='';
+}
+function renderDataStats(){
+  const total=state.sessions.reduce((a,s)=>a+s.duration,0);
+  const days=new Set(state.sessions.map(s=>s.dateStr)).size;
+  document.getElementById('dataStats').innerHTML=
+    '<h3> Overview</h3>'+
+    '<div class="report-row"><span>Total Sessions</span><span class="val">'+state.sessions.length+'</span></div>'+
+    '<div class="report-row"><span>Active Days</span><span class="val">'+days+'</span></div>'+
+    '<div class="report-row"><span>Total Time</span><span class="val">'+formatDuration(total)+'</span></div>'+
+    '<div class="report-row"><span>Daily Average</span><span class="val">'+formatDuration(days>0?Math.round(total/days):0)+'</span></div>'+
+    '<div class="report-row"><span>Categories</span><span class="val">'+state.categories.length+'</span></div>';
+}
+
+// ===== JALAALI.JS LIBRARY (MIT License) =====
+var jalaali = (function(){
+  var module = {exports:{}};
+  var exports = module.exports;
+
+(function(f){if(typeof exports==="object"&&typeof module!=="undefined"){module.exports=f()}else if(typeof define==="function"&&define.amd){define([],f)}else{var g;if(typeof window!=="undefined"){g=window}else if(typeof global!=="undefined"){g=global}else if(typeof self!=="undefined"){g=self}else{g=this}g.jalaali = f()}})(function(){var define,module,exports;return (function(){function r(e,n,t){function o(i,f){if(!n[i]){if(!e[i]){var c="function"==typeof require&&require;if(!f&&c)return c(i,!0);if(u)return u(i,!0);var a=new Error("Cannot find module '"+i+"'");throw a.code="MODULE_NOT_FOUND",a}var p=n[i]={exports:{}};e[i][0].call(p.exports,function(r){var n=e[i][1][r];return o(n||r)},p,p.exports,r,e,n,t)}return n[i].exports}for(var u="function"==typeof require&&require,i=0;i<t.length;i++)o(t[i]);return o}return r})()({1:[function(require,module,exports){
+/*
+  Expose functions.
+*/
+module.exports =
+  { toJalaali: toJalaali
+  , toGregorian: toGregorian
+  , isValidJalaaliDate: isValidJalaaliDate
+  , isLeapJalaaliYear: isLeapJalaaliYear
+  , jalaaliMonthLength: jalaaliMonthLength
+  , jalCal: jalCal
+  , j2d: j2d
+  , d2j: d2j
+  , g2d: g2d
+  , d2g: d2g
+  , jalaaliToDateObject: jalaaliToDateObject
+  , jalaaliWeek: jalaaliWeek
+  }
+
+/*
+  Jalaali years starting the 33-year rule.
+*/
+var breaks =  [ -61, 9, 38, 199, 426, 686, 756, 818, 1111, 1181, 1210
+  , 1635, 2060, 2097, 2192, 2262, 2324, 2394, 2456, 3178
+  ]
+
+/*
+  Converts a Gregorian date to Jalaali.
+*/
+function toJalaali(gy, gm, gd) {
+  if (Object.prototype.toString.call(gy) === '[object Date]') {
+    gd = gy.getDate()
+    gm = gy.getMonth() + 1
+    gy = gy.getFullYear()
+  }
+  return d2j(g2d(gy, gm, gd))
+}
+
+/*
+  Converts a Jalaali date to Gregorian.
+*/
+function toGregorian(jy, jm, jd) {
+  return d2g(j2d(jy, jm, jd))
+}
+
+/*
+  Checks whether a Jalaali date is valid or not.
+*/
+function isValidJalaaliDate(jy, jm, jd) {
+  return  jy >= -61 && jy <= 3177 &&
+          jm >= 1 && jm <= 12 &&
+          jd >= 1 && jd <= jalaaliMonthLength(jy, jm)
+}
+
+/*
+  Is this a leap year or not?
+*/
+function isLeapJalaaliYear(jy) {
+  return jalCalLeap(jy) === 0
+}
+
+/*
+  Number of days in a given month in a Jalaali year.
+*/
+function jalaaliMonthLength(jy, jm) {
+  if (jm <= 6) return 31
+  if (jm <= 11) return 30
+  if (isLeapJalaaliYear(jy)) return 30
+  return 29
+}
+
+/*
+    This function determines if the Jalaali (Persian) year is
+    leap (366-day long) or is the common year (365 days)
+
+    @param jy Jalaali calendar year (-61 to 3177)
+    @returns number of years since the last leap year (0 to 4)
+ */
+function jalCalLeap(jy) {
+  var bl = breaks.length
+    , jp = breaks[0]
+    , jm
+    , jump
+    , leap
+    , n
+    , i
+
+  if (jy < jp || jy >= breaks[bl - 1])
+    throw new Error('Invalid Jalaali year ' + jy)
+
+  for (i = 1; i < bl; i += 1) {
+    jm = breaks[i]
+    jump = jm - jp
+    if (jy < jm)
+      break
+    jp = jm
+  }
+  n = jy - jp
+
+  if (jump - n < 6)
+    n = n - jump + div(jump + 4, 33) * 33
+  leap = mod(mod(n + 1, 33) - 1, 4)
+  if (leap === -1) {
+    leap = 4
+  }
+
+  return leap
+}
+
+/*
+  This function determines if the Jalaali (Persian) year is
+  leap (366-day long) or is the common year (365 days), and
+  finds the day in March (Gregorian calendar) of the first
+  day of the Jalaali year (jy).
+
+  @param jy Jalaali calendar year (-61 to 3177)
+  @param withoutLeap when don't need leap (true or false) default is false
+  @return
+    leap: number of years since the last leap year (0 to 4)
+    gy: Gregorian year of the beginning of Jalaali year
+    march: the March day of Farvardin the 1st (1st day of jy)
+  @see: http://www.astro.uni.torun.pl/~kb/Papers/EMP/PersianC-EMP.htm
+  @see: http://www.fourmilab.ch/documents/calendar/
+*/
+function jalCal(jy, withoutLeap) {
+  var bl = breaks.length
+    , gy = jy + 621
+    , leapJ = -14
+    , jp = breaks[0]
+    , jm
+    , jump
+    , leap
+    , leapG
+    , march
+    , n
+    , i
+
+  if (jy < jp || jy >= breaks[bl - 1])
+    throw new Error('Invalid Jalaali year ' + jy)
+
+  // Find the limiting years for the Jalaali year jy.
+  for (i = 1; i < bl; i += 1) {
+    jm = breaks[i]
+    jump = jm - jp
+    if (jy < jm)
+      break
+    leapJ = leapJ + div(jump, 33) * 8 + div(mod(jump, 33), 4)
+    jp = jm
+  }
+  n = jy - jp
+
+  // Find the number of leap years from AD 621 to the beginning
+  // of the current Jalaali year in the Persian calendar.
+  leapJ = leapJ + div(n, 33) * 8 + div(mod(n, 33) + 3, 4)
+  if (mod(jump, 33) === 4 && jump - n === 4)
+    leapJ += 1
+
+  // And the same in the Gregorian calendar (until the year gy).
+  leapG = div(gy, 4) - div((div(gy, 100) + 1) * 3, 4) - 150
+
+  // Determine the Gregorian date of Farvardin the 1st.
+  march = 20 + leapJ - leapG
+
+  // return with gy and march when we don't need leap
+  if (withoutLeap) return { gy: gy, march: march };
+
+
+  // Find how many years have passed since the last leap year.
+  if (jump - n < 6)
+    n = n - jump + div(jump + 4, 33) * 33
+  leap = mod(mod(n + 1, 33) - 1, 4)
+  if (leap === -1) {
+    leap = 4
+  }
+
+  return  { leap: leap
+          , gy: gy
+          , march: march
+          }
+}
+
+/*
+  Converts a date of the Jalaali calendar to the Julian Day number.
+
+  @param jy Jalaali year (1 to 3100)
+  @param jm Jalaali month (1 to 12)
+  @param jd Jalaali day (1 to 29/31)
+  @return Julian Day number
+*/
+function j2d(jy, jm, jd) {
+  var r = jalCal(jy, true)
+  return g2d(r.gy, 3, r.march) + (jm - 1) * 31 - div(jm, 7) * (jm - 7) + jd - 1
+}
+
+/*
+  Converts the Julian Day number to a date in the Jalaali calendar.
+
+  @param jdn Julian Day number
+  @return
+    jy: Jalaali year (1 to 3100)
+    jm: Jalaali month (1 to 12)
+    jd: Jalaali day (1 to 29/31)
+*/
+function d2j(jdn) {
+  var gy = d2g(jdn).gy // Calculate Gregorian year (gy).
+    , jy = gy - 621
+    , r = jalCal(jy, false)
+    , jdn1f = g2d(gy, 3, r.march)
+    , jd
+    , jm
+    , k
+
+  // Find number of days that passed since 1 Farvardin.
+  k = jdn - jdn1f
+  if (k >= 0) {
+    if (k <= 185) {
+      // The first 6 months.
+      jm = 1 + div(k, 31)
+      jd = mod(k, 31) + 1
+      return  { jy: jy
+              , jm: jm
+              , jd: jd
+              }
+    } else {
+      // The remaining months.
+      k -= 186
+    }
+  } else {
+    // Previous Jalaali year.
+    jy -= 1
+    k += 179
+    if (r.leap === 1)
+      k += 1
+  }
+  jm = 7 + div(k, 30)
+  jd = mod(k, 30) + 1
+  return  { jy: jy
+          , jm: jm
+          , jd: jd
+          }
+}
+
+/*
+  Calculates the Julian Day number from Gregorian or Julian
+  calendar dates. This integer number corresponds to the noon of
+  the date (i.e. 12 hours of Universal Time).
+  The procedure was tested to be good since 1 March, -100100 (of both
+  calendars) up to a few million years into the future.
+
+  @param gy Calendar year (years BC numbered 0, -1, -2, ...)
+  @param gm Calendar month (1 to 12)
+  @param gd Calendar day of the month (1 to 28/29/30/31)
+  @return Julian Day number
+*/
+function g2d(gy, gm, gd) {
+  var d = div((gy + div(gm - 8, 6) + 100100) * 1461, 4)
+      + div(153 * mod(gm + 9, 12) + 2, 5)
+      + gd - 34840408
+  d = d - div(div(gy + 100100 + div(gm - 8, 6), 100) * 3, 4) + 752
+  return d
+}
+
+/*
+  Calculates Gregorian and Julian calendar dates from the Julian Day number
+  (jdn) for the period since jdn=-34839655 (i.e. the year -100100 of both
+  calendars) to some millions years ahead of the present.
+
+  @param jdn Julian Day number
+  @return
+    gy: Calendar year (years BC numbered 0, -1, -2, ...)
+    gm: Calendar month (1 to 12)
+    gd: Calendar day of the month M (1 to 28/29/30/31)
+*/
+function d2g(jdn) {
+  var j
+    , i
+    , gd
+    , gm
+    , gy
+  j = 4 * jdn + 139361631
+  j = j + div(div(4 * jdn + 183187720, 146097) * 3, 4) * 4 - 3908
+  i = div(mod(j, 1461), 4) * 5 + 308
+  gd = div(mod(i, 153), 5) + 1
+  gm = mod(div(i, 153), 12) + 1
+  gy = div(j, 1461) - 100100 + div(8 - gm, 6)
+  return  { gy: gy
+          , gm: gm
+          , gd: gd
+          }
+}
+
+/**
+ * Return Saturday and Friday day of current week(week start in Saturday)
+ * @param {number} jy jalaali year
+ * @param {number} jm jalaali month
+ * @param {number} jd jalaali day
+ * @returns Saturday and Friday of current week
+ */
+function jalaaliWeek(jy, jm, jd) {
+  var dayOfWeek = jalaaliToDateObject(jy, jm, jd).getDay();
+
+  var startDayDifference = dayOfWeek == 6 ? 0 : -(dayOfWeek+1);
+  var endDayDifference = 6+startDayDifference;
+
+  return {
+    saturday: d2j(j2d(jy, jm, jd+startDayDifference)),
+    friday: d2j(j2d(jy, jm, jd+endDayDifference))
+  }
+}
+
+/**
+ * Convert Jalaali calendar dates to javascript Date object
+ * @param {number} jy jalaali year
+ * @param {number} jm jalaali month
+ * @param {number} jd jalaali day
+ * @param {number} [h] hours
+ * @param {number} [m] minutes
+ * @param {number} [s] seconds
+ * @param {number} [ms] milliseconds
+ * @returns Date object of the jalaali calendar dates
+ */
+function jalaaliToDateObject(
+  jy,
+  jm,
+  jd,
+  h,
+  m,
+  s,
+  ms
+) {
+  var gregorianCalenderDate = toGregorian(jy, jm, jd);
+
+  return new Date(
+    gregorianCalenderDate.gy,
+    gregorianCalenderDate.gm - 1,
+    gregorianCalenderDate.gd,
+    h || 0,
+    m || 0,
+    s || 0,
+    ms || 0
+  );
+}
+
+/*
+  Utility helper functions.
+*/
+
+function div(a, b) {
+  return ~~(a / b)
+}
+
+function mod(a, b) {
+  return a - ~~(a / b) * b
+}
+
+},{}],2:[function(require,module,exports){
+module.exports = require('./index.js');
+},{"./index.js":1}]},{},[2])(2)
+});
+
+  return module.exports;
+})();
+
+
+// ===== INIT =====
+renderCategories();
+
+
+// ===== HELPER FUNCTIONS =====
+var jalali_months=['Farvardin','Ordibehesht','Khordad','Tir','Mordad','Shahrivar','Mehr','Aban','Azar','Dey','Bahman','Esfand'];
+
+function gregorianToJalali(gy,gm,gd){
+  return jalaali.toJalaali(gy,gm,gd);
+}
+var greg_months=['January','February','March','April','May','June','July','August','September','October','November','December'];
+var greg_days=['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+function formatJalali(now){
+  var j=gregorianToJalali(now.getFullYear(),now.getMonth()+1,now.getDate());
+  return greg_days[now.getDay()]+', '+j.jd+' '+jalali_months[j.jm-1]+' '+j.jy;
+}
+function formatGregorian(now){
+  return now.getDate()+' '+greg_months[now.getMonth()]+' '+now.getFullYear();
+}
+
+
+// ===== FIREBASE SYNC =====
+
+
+// NOTE: Firebase's client SDK can only authenticate with a real Firebase Auth
+// token, not a raw legacy "database secret" (that mechanism was removed from
+// the SDK years ago). To actually use the secret the user types in, we talk
+// to the Realtime Database REST endpoint directly and pass it as ?auth=...
+let fbBaseUrl=null, fbSecret=null;
+
+function connectFirebase(){
+  try{
+    const proj=document.getElementById('fbProject').value.trim();
+    const secret=document.getElementById('fbSecret').value.trim();
+    if(!proj||!secret){alert('Enter Project ID and Database Secret');return;}
+    // Newer Realtime Database instances don't live at PROJECT_ID.firebaseio.com
+    // anymore -- they get a region-specific host like
+    // PROJECT_ID-default-rtdb.REGION.firebasedatabase.app. Accept either: a
+    // full URL pasted from the Firebase console, or a bare project id (old format).
+    let dbRoot=proj;
+    if(!/^https?:\/\//i.test(dbRoot)) dbRoot='https://'+dbRoot+'.firebaseio.com';
+    dbRoot=dbRoot.replace(/\/$/,'');
+    fbBaseUrl=dbRoot+'/timetracker.json';
+    fbSecret=secret;
+    // Verify the project + secret actually work before claiming "Connected".
+    fetch(fbBaseUrl+'?auth='+encodeURIComponent(fbSecret)+'&shallow=true')
+      .then(function(res){
+        if(!res.ok) throw new Error('HTTP '+res.status+' (check Project ID / Database Secret)');
+        localStorage.setItem('fbConfig',JSON.stringify({project:proj,secret:secret}));
+        document.getElementById('firebaseStatus').textContent='Connected to '+proj;
+        document.getElementById('firebaseStatus').style.opacity='0.8';
+      })
+      .catch(function(e){
+        fbBaseUrl=null;fbSecret=null;
+        document.getElementById('firebaseStatus').textContent='Error: '+e.message;
+        document.getElementById('firebaseStatus').style.opacity='1';
+      });
+  }catch(e){
+    document.getElementById('firebaseStatus').textContent='Error: '+e.message;
+    document.getElementById('firebaseStatus').style.opacity='1';
+  }
+}
+
+function syncToFirebase(){
+  if(!fbBaseUrl){alert('Connect to Firebase first');return;}
+  fetch(fbBaseUrl+'?auth='+encodeURIComponent(fbSecret),{
+    method:'PUT',
+    headers:{'Content-Type':'application/json'},
+    body:JSON.stringify(state)
+  }).then(function(res){
+    if(!res.ok) throw new Error('HTTP '+res.status);
+    document.getElementById('firebaseStatus').textContent='Synced!';
+  }).catch(function(e){
+    document.getElementById('firebaseStatus').textContent='Error: '+e.message;
+  });
+}
+
+function loadFromFirebase(){
+  if(!fbBaseUrl){alert('Connect to Firebase first');return;}
+  fetch(fbBaseUrl+'?auth='+encodeURIComponent(fbSecret))
+    .then(function(res){
+      if(!res.ok) throw new Error('HTTP '+res.status);
+      return res.json();
+    })
+    .then(function(data){
+      if(data&&data.categories&&data.sessions){
+        state=data;
+        saveState();
+        renderCategories();
+        renderHistory();
+        document.getElementById('firebaseStatus').textContent='Loaded!';
+      }else{
+        document.getElementById('firebaseStatus').textContent='No data found on server';
+      }
+    })
+    .catch(function(e){
+      document.getElementById('firebaseStatus').textContent='Error: '+e.message;
+    });
+}
+
+// Auto-reconnect on page load
+(function(){
+  const cfg=localStorage.getItem('fbConfig');
+  if(cfg){
+    try{
+      const c=JSON.parse(cfg);
+      document.getElementById('fbProject').value=c.project;
+      document.getElementById('fbSecret').value=c.secret;
+      connectFirebase();
+    }catch(e){}
+  }
+})();
+
+// ===== LIVE CLOCK =====
+function updateLiveClock(){
+  const now=new Date();
+  var hr=now.getHours();var ap=hr>=12?'PM':'AM';var h=String(hr%12||12).padStart(2,'0');
+  const m=String(now.getMinutes()).padStart(2,'0');
+  const s=String(now.getSeconds()).padStart(2,'0');
+  document.querySelector('.clock-time').textContent=h+':'+m+':'+s;
+  document.querySelector('.clock-ampm').textContent=ap;
+  var dayNames=['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
+  var monthNames=['January','February','March','April','May','June','July','August','September','October','November','December'];
+  document.getElementById('dayDisplay').textContent=dayNames[now.getDay()];
+  document.getElementById('liveDate').textContent=now.getDate()+' '+monthNames[now.getMonth()]+' '+now.getFullYear();
+  var j=gregorianToJalali(now.getFullYear(),now.getMonth()+1,now.getDate());
+  document.getElementById('liveDateJalali').textContent=j.jd+' '+jalali_months[j.jm-1]+' '+j.jy;
+}
+updateLiveClock();
+setInterval(updateLiveClock,1000);
+</script>
+</body>
+</html>
