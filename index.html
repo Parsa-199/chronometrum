@@ -644,6 +644,21 @@ body{
   border-color:rgba(232,224,212,0.4);
 }
 .fb-input::placeholder{color:rgba(232,224,212,0.25)}
+.cal-toggle{
+  display:block;
+  margin:6px auto 0;
+  padding:4px 12px;
+  border-radius:20px;
+  background:rgba(232,224,212,0.06);
+  color:#e8e0d4;
+  border:1px solid rgba(232,224,212,0.15);
+  font-size:11px;
+  font-family:'Courier New',monospace;
+  letter-spacing:0.3px;
+  cursor:pointer;
+  opacity:0.75;
+}
+.cal-toggle:hover{opacity:1;background:rgba(232,224,212,0.1)}
 .heatmap{
   display:grid;
   grid-template-rows:repeat(7,1fr);
@@ -784,6 +799,7 @@ body::before{
 <div class="header">
 <div style="display:flex;align-items:center;justify-content:center;gap:8px"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#e8e0d4" stroke-width="1.5"><circle cx="12" cy="12" r="10"/><polyline points="12,6 12,12 16,14"/></svg><h1>Chronometrum</h1></div>
 <div class="day-display" id="dayDisplay"></div>
+<button id="calToggle" class="cal-toggle" onclick="toggleCalendarMode()">Calendar: Gregorian</button>
 </div>
 <svg class="greek-key" viewBox="0 0 200 16" xmlns="http://www.w3.org/2000/svg">
   <path d="M0,8 L8,8 L8,0 L16,0 L16,8 L24,8 L24,16 L32,16 L32,8 L40,8 L40,0 L48,0 L48,8 L56,8 L56,16 L64,16 L64,8 L72,8 L72,0 L80,0 L80,8 L88,8 L88,16 L96,16 L96,8 L104,8 L104,0 L112,0 L112,8 L120,8 L120,16 L128,16 L128,8 L136,8 L136,0 L144,0 L144,8 L152,8 L152,16 L160,16 L160,8 L168,8 L168,0 L176,0 L176,8 L184,8 L184,16 L192,16 L192,8 L200,8" 
@@ -886,14 +902,23 @@ body::before{
 </div>
 
 <div style="margin-top:14px">
-<h3 class="section-heading" style="font-size:13px;opacity:0.7">Add Time Manually</h3>
+<h3 class="section-heading" style="font-size:13px;opacity:0.7">Adjust Time Manually</h3>
+<div style="display:flex;gap:8px;margin-bottom:8px">
+<button type="button" id="manualModeAdd" class="fb-btn" onclick="setManualMode('add')">+ Add</button>
+<button type="button" id="manualModeSub" class="fb-btn" onclick="setManualMode('sub')" style="opacity:0.5">− Subtract</button>
+</div>
 <select id="manualCat" class="cat-select" style="margin-bottom:8px"></select>
-<div style="display:flex;gap:8px;align-items:center">
+<div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
 <input type="number" id="manualHours" min="0" placeholder="Hours" class="fb-input" style="text-align:center">
 <input type="number" id="manualMinutes" min="0" max="59" placeholder="Minutes" class="fb-input" style="text-align:center">
-<input type="date" id="manualDate" class="fb-input" style="flex:1.4">
+<input type="date" id="manualDate" class="fb-input date-greg" style="flex:1.4">
+<div class="date-jalali" id="manualDate-jalali" style="display:none;gap:4px;flex:1.4">
+<input type="number" id="manualDateJD" class="fb-input" placeholder="Day" min="1" max="31" style="width:52px;text-align:center">
+<select id="manualDateJM" class="fb-input" style="flex:1"></select>
+<input type="number" id="manualDateJY" class="fb-input" placeholder="Year" style="width:68px;text-align:center">
 </div>
-<button onclick="addManualTime()" class="fb-btn" style="width:100%;margin-top:8px">Add</button>
+</div>
+<button onclick="applyManualTime()" class="fb-btn" style="width:100%;margin-top:8px">Apply</button>
 </div>
 </div>
 </div>
@@ -906,9 +931,19 @@ body::before{
 <button onclick="showReport('monthly',this)">Monthly</button>
 <button onclick="showReport('custom',this)">Custom</button>
 </div>
-<div id="customRange" style="display:none;gap:8px;margin-bottom:12px">
-<input type="date" id="reportFrom" class="fb-input">
-<input type="date" id="reportTo" class="fb-input">
+<div id="customRange" style="display:none;gap:8px;margin-bottom:12px;flex-wrap:wrap">
+<input type="date" id="reportFrom" class="fb-input date-greg">
+<div class="date-jalali" id="reportFrom-jalali" style="display:none;gap:4px">
+<input type="number" id="reportFromJD" class="fb-input" placeholder="Day" min="1" max="31" style="width:52px;text-align:center">
+<select id="reportFromJM" class="fb-input" style="flex:1"></select>
+<input type="number" id="reportFromJY" class="fb-input" placeholder="Year" style="width:68px;text-align:center">
+</div>
+<input type="date" id="reportTo" class="fb-input date-greg">
+<div class="date-jalali" id="reportTo-jalali" style="display:none;gap:4px">
+<input type="number" id="reportToJD" class="fb-input" placeholder="Day" min="1" max="31" style="width:52px;text-align:center">
+<select id="reportToJM" class="fb-input" style="flex:1"></select>
+<input type="number" id="reportToJY" class="fb-input" placeholder="Year" style="width:68px;text-align:center">
+</div>
 <button class="fb-btn" onclick="showReport('custom',document.querySelector('.report-tabs button:last-child'))">Apply</button>
 </div>
 <div id="reportContent"></div>
@@ -954,6 +989,14 @@ body::before{
 <h3 style="font-size:14px;color:#e8e0d4;margin:0 0 8px;opacity:0.7">Local Backups</h3>
 <div id="backupList"></div>
 </div>
+
+<div class="report-card" style="margin-top:12px">
+<h3 style="font-size:14px;color:#e8e0d4;margin:0 0 8px;opacity:0.7">Maintenance</h3>
+<div class="report-row"><span style="font-size:12px;opacity:0.7">Removes sessions that got double-counted by an old sync bug</span></div>
+<button class="fb-btn" style="width:100%;margin-top:8px" onclick="removeDuplicateSessions()">Remove Duplicate Sessions</button>
+<div class="report-row" style="margin-top:10px"><span style="font-size:12px;opacity:0.7">Combines repeated Stop/Start sessions of the same category on the same day into one entry</span></div>
+<button class="fb-btn" style="width:100%;margin-top:8px" onclick="mergeSessionsByDayCategory()">Merge Same-Day Sessions</button>
+</div>
 </div>
 
 <script>
@@ -975,10 +1018,14 @@ function loadState(){
   try{const raw=localStorage.getItem('timetracker');s=raw?JSON.parse(raw):defaultState();}
   catch(e){s=defaultState();}
   // Older sessions (saved before ids existed) need one assigned so
-  // edit/delete/undo/merge can all reference them reliably.
+  // edit/delete/undo/merge can all reference them reliably. This MUST be
+  // deterministic (same content -> same id) rather than random -- a random
+  // id assigned independently on two devices for the very same legacy
+  // session gives it two different ids, so a later sync/merge treats it as
+  // two separate sessions and double-counts its duration.
   let changed=false;
   (s.sessions||[]).forEach(sess=>{
-    if(!sess.id){sess.id=Date.now()+'-'+Math.random().toString(36).slice(2,8);changed=true;}
+    if(!sess.id){sess.id=sess.date+'|'+sess.category+'|'+sess.duration;changed=true;}
   });
   if(changed) localStorage.setItem('timetracker',JSON.stringify(s));
   return s;
@@ -1073,14 +1120,29 @@ function addCategory(){
   state.categories.push(name);
   saveState();renderCategories();input.value='';
 }
-function addManualTime(){
+let manualMode='add';
+function setManualMode(mode){
+  manualMode=mode;
+  document.getElementById('manualModeAdd').style.opacity=(mode==='add')?'1':'0.5';
+  document.getElementById('manualModeSub').style.opacity=(mode==='sub')?'1':'0.5';
+}
+function applyManualTime(){
   const cat=document.getElementById('manualCat').value;
   if(!cat){alert('Add a category first');return;}
   const h=parseInt(document.getElementById('manualHours').value)||0;
   const m=parseInt(document.getElementById('manualMinutes').value)||0;
-  const dur=h*3600+m*60;
+  let dur=h*3600+m*60;
   if(dur<=0){alert('Enter hours and/or minutes');return;}
-  const dateVal=document.getElementById('manualDate').value;
+  let noteLabel='manual entry';
+  if(manualMode==='sub'){
+    const currentTotal=state.sessions.filter(s=>s.category===cat).reduce((a,s)=>a+s.duration,0);
+    if(dur>currentTotal){
+      if(!confirm('"'+cat+'" only has '+formatDuration(currentTotal)+' logged. Subtract '+formatDuration(dur)+' anyway?'))return;
+    }
+    dur=-dur;
+    noteLabel='manual adjustment';
+  }
+  const dateVal=getDateInputValue('manualDate');
   let d;
   if(dateVal){
     // Build the date from its local y/m/d parts at noon, rather than
@@ -1097,7 +1159,7 @@ function addManualTime(){
     duration:dur,
     date:d.toISOString(),
     dateStr:d.toLocaleDateString('en-US'),
-    timeStr:'manual entry'
+    timeStr:noteLabel
   });
   saveState();
   renderCategories();renderHistory();
@@ -1198,11 +1260,16 @@ function updateTimerDisplay(sec){
     String(h).padStart(2,'0')+':'+String(m).padStart(2,'0')+':'+String(s).padStart(2,'0');
 }
 function formatDuration(sec){
-  if(sec<60)return sec+' sec';
-  const h=Math.floor(sec/3600);
-  const m=Math.floor((sec%3600)/60);
-  if(h>0)return h+'h '+m+'min';
-  return m+'min';
+  const neg=sec<0;
+  sec=Math.abs(sec);
+  let out;
+  if(sec<60)out=sec+' sec';
+  else{
+    const h=Math.floor(sec/3600);
+    const m=Math.floor((sec%3600)/60);
+    out=(h>0)?(h+'h '+m+'min'):(m+'min');
+  }
+  return neg?'-'+out:out;
 }
 
 // ===== REPORTS =====
@@ -1252,19 +1319,21 @@ function showReport(type,btn){
     availableSec=sessions.length?Math.max(1,Math.round((today-new Date(Math.min(...sessions.map(s=>new Date(s.date))))) /1000)):0;
   }else{
     // custom range
-    const fromEl=document.getElementById('reportFrom'),toEl=document.getElementById('reportTo');
-    if(!fromEl.value){
+    if(isDateInputEmpty('reportFrom')){
       const d=new Date(today);d.setDate(d.getDate()-7);
-      fromEl.value=d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
+      const iso=d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
+      setDateInputValue('reportFrom',iso);
     }
-    if(!toEl.value){
-      toEl.value=today.getFullYear()+'-'+String(today.getMonth()+1).padStart(2,'0')+'-'+String(today.getDate()).padStart(2,'0');
+    if(isDateInputEmpty('reportTo')){
+      const iso=today.getFullYear()+'-'+String(today.getMonth()+1).padStart(2,'0')+'-'+String(today.getDate()).padStart(2,'0');
+      setDateInputValue('reportTo',iso);
     }
-    const fp=fromEl.value.split('-').map(Number),tp=toEl.value.split('-').map(Number);
+    const fromIso=getDateInputValue('reportFrom'),toIso=getDateInputValue('reportTo');
+    const fp=fromIso.split('-').map(Number),tp=toIso.split('-').map(Number);
     const fromDate=new Date(fp[0],fp[1]-1,fp[2],0,0,0);
     const toDate=new Date(tp[0],tp[1]-1,tp[2],23,59,59);
     sessions=state.sessions.filter(s=>{const d=new Date(s.date);return d>=fromDate&&d<=toDate;});
-    title=fromEl.value+' to '+toEl.value;
+    title=displayDateStr(fromDate)+' to '+displayDateStr(toDate);
     availableSec=Math.max(1,Math.round((toDate-fromDate)/1000));
   }
   const total=sessions.reduce((a,s)=>a+s.duration,0);
@@ -1282,7 +1351,7 @@ function showReport(type,btn){
   html+='</div><div class="report-card"><h3> By Category</h3><div class="bar-chart">';
   let i=0;
   for(const[cat,dur] of Object.entries(byCat)){
-    const pct=maxVal>0?(dur/maxVal*100):0;
+    const pct=maxVal>0?Math.max(0,dur/maxVal*100):0;
     var pctAvail=availableSec>0?Math.round(dur/availableSec*100):0;
     const op=opacities[i%opacities.length];
     html+='<div class="bar-row"><span class="bar-label">'+escapeHtml(cat)+'</span><div class="bar-track"><div class="bar-fill" style="width:'+pct+'%;background:#e8e0d4;opacity:'+op+'"></div></div><span class="bar-val">'+(dur>0?formatDuration(dur):'—')+'</span><span class="bar-pct">'+pctAvail+'%</span></div>';
@@ -1324,7 +1393,7 @@ function renderHistory(){
       '</div>';
     }
     const editAttr=s.id?"editSession('"+s.id+"')":"alert('This older session can\'t be edited — delete and re-add it instead.')";
-    return '<div class="history-item"><div class="info"><div>'+escapeHtml(s.category)+'</div><div class="cat">'+s.dateStr+' '+s.timeStr+'</div>'+(s.timeStr==='manual entry'?'<div class="session-note">manually added</div>':'')+'</div><span class="dur">'+formatDuration(s.duration)+'</span><div class="hist-actions"><button class="del-h" onclick="'+editAttr+'"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 013 3L7 19l-4 1 1-4L16.5 3.5z"/></svg></button><button class="del-h" onclick="deleteSession('+idx+')"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button></div></div>';
+    return '<div class="history-item"><div class="info"><div>'+escapeHtml(s.category)+'</div><div class="cat">'+displayDateStr(new Date(s.date))+' '+s.timeStr+'</div>'+(s.timeStr==='manual entry'?'<div class="session-note">manually added</div>':s.timeStr==='manual adjustment'?'<div class="session-note">manual adjustment</div>':'')+'</div><span class="dur">'+formatDuration(s.duration)+'</span><div class="hist-actions"><button class="del-h" onclick="'+editAttr+'"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 013 3L7 19l-4 1 1-4L16.5 3.5z"/></svg></button><button class="del-h" onclick="deleteSession('+idx+')"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button></div></div>';
   }).join('');
 }
 function editSession(id){
@@ -1465,6 +1534,56 @@ function restoreBackup(idx){
   renderCategories();renderHistory();renderDataStats();
   alert('Restored.');
 }
+function removeDuplicateSessions(){
+  maybeBackup(true); // snapshot before touching anything, just in case
+  const seen=new Set();
+  const kept=[];
+  let removed=0;
+  state.sessions.forEach(s=>{
+    const key=s.date+'|'+s.category+'|'+s.duration;
+    if(seen.has(key)){removed++;return;}
+    seen.add(key);
+    kept.push(s);
+  });
+  if(!removed){alert('No duplicates found.');return;}
+  if(!confirm('Found '+removed+' duplicate session(s). Remove them? A backup of the current data was just taken, so this is reversible from Local Backups.'))return;
+  state.sessions=kept;
+  saveState();
+  renderCategories();renderHistory();renderDataStats();
+  alert('Removed '+removed+' duplicate session(s). If you use cloud sync on another device, run Sync Now there too.');
+}
+function mergeSessionsByDayCategory(){
+  const groups={};
+  state.sessions.forEach(s=>{
+    const key=s.dateStr+'|'+s.category;
+    if(!groups[key])groups[key]=[];
+    groups[key].push(s);
+  });
+  let mergedCount=0;
+  Object.values(groups).forEach(list=>{if(list.length>1)mergedCount+=list.length-1;});
+  if(!mergedCount){alert('Nothing to merge — every session is already the only one for its category/day.');return;}
+  if(!confirm('This will combine '+mergedCount+' session(s) into their same-day, same-category totals (e.g. several short Stop/Start entries for "Study" on the same day become one). Continue?'))return;
+  maybeBackup(true);
+  const merged=[];
+  Object.values(groups).forEach(list=>{
+    if(list.length===1){merged.push(list[0]);return;}
+    list.sort((a,b)=>new Date(a.date)-new Date(b.date));
+    const first=list[0];
+    merged.push({
+      id:first.id,
+      category:first.category,
+      duration:list.reduce((a,s)=>a+s.duration,0),
+      date:first.date,
+      dateStr:first.dateStr,
+      timeStr:first.timeStr
+    });
+  });
+  merged.sort((a,b)=>new Date(a.date)-new Date(b.date));
+  state.sessions=merged;
+  saveState();
+  renderCategories();renderHistory();renderDataStats();
+  alert('Merged. Session count reduced by '+mergedCount+'. If you use cloud sync on another device, run Sync Now there too.');
+}
 function renderHeatmap(){
   const el=document.getElementById('heatmap');
   if(!el)return;
@@ -1488,7 +1607,7 @@ function renderHeatmap(){
     const key=d.toDateString();
     const dur=byDate[key]||0;
     const op=dur>0?(0.15+dur/maxDur*0.85):0.06;
-    const label=d.toLocaleDateString('en-US',{month:'short',day:'numeric'})+' — '+(dur>0?formatDuration(dur):'no activity');
+    const label=displayDateShort(d)+' — '+(dur>0?formatDuration(dur):'no activity');
     cells.push('<div class="heatmap-cell" title="'+label+'" style="background:rgba(232,224,212,'+op+')"></div>');
   }
   el.innerHTML=cells.join('');
@@ -1863,16 +1982,6 @@ module.exports = require('./index.js');
 })();
 
 
-// ===== INIT =====
-renderCategories();
-(function(){
-  const d=new Date();
-  const iso=d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
-  const el=document.getElementById('manualDate');
-  if(el) el.value=iso;
-})();
-
-
 // ===== HELPER FUNCTIONS =====
 var jalali_months=['Farvardin','Ordibehesht','Khordad','Tir','Mordad','Shahrivar','Mehr','Aban','Azar','Dey','Bahman','Esfand'];
 
@@ -1887,6 +1996,86 @@ function formatJalali(now){
 }
 function formatGregorian(now){
   return now.getDate()+' '+greg_months[now.getMonth()]+' '+now.getFullYear();
+}
+
+// ===== CALENDAR MODE (Gregorian / Jalali) =====
+// UI language stays English throughout -- jalali_months above is already
+// the English transliteration of the Persian month names, so Jalali display
+// never introduces Persian text, only a different date system.
+let calendarMode=localStorage.getItem('calendarMode')||'gregorian';
+function populateJalaliMonthSelects(){
+  const opts=jalali_months.map((m,i)=>'<option value="'+(i+1)+'">'+m+'</option>').join('');
+  ['manualDateJM','reportFromJM','reportToJM'].forEach(id=>{
+    const el=document.getElementById(id);
+    if(el)el.innerHTML=opts;
+  });
+}
+// Reads the currently-visible representation of a date field (native
+// Gregorian picker, or the Jalali year/month/day trio) and always returns
+// a plain Gregorian 'YYYY-MM-DD' string, since all internal filtering/
+// storage stays Gregorian regardless of what the person sees on screen.
+function getDateInputValue(prefix){
+  if(calendarMode==='jalali'){
+    const jy=parseInt(document.getElementById(prefix+'JY').value);
+    const jm=parseInt(document.getElementById(prefix+'JM').value);
+    const jd=parseInt(document.getElementById(prefix+'JD').value);
+    if(!jy||!jm||!jd)return '';
+    const g=jalaali.toGregorian(jy,jm,jd);
+    return g.gy+'-'+String(g.gm).padStart(2,'0')+'-'+String(g.gd).padStart(2,'0');
+  }
+  return document.getElementById(prefix).value;
+}
+function setDateInputValue(prefix,isoStr){
+  if(!isoStr)return;
+  document.getElementById(prefix).value=isoStr;
+  const parts=isoStr.split('-').map(Number);
+  const j=jalaali.toJalaali(parts[0],parts[1],parts[2]);
+  const jyEl=document.getElementById(prefix+'JY'),jmEl=document.getElementById(prefix+'JM'),jdEl=document.getElementById(prefix+'JD');
+  if(jyEl){jyEl.value=j.jy;jmEl.value=j.jm;jdEl.value=j.jd;}
+}
+function isDateInputEmpty(prefix){
+  if(calendarMode==='jalali'){
+    return !document.getElementById(prefix+'JY').value||!document.getElementById(prefix+'JM').value||!document.getElementById(prefix+'JD').value;
+  }
+  return !document.getElementById(prefix).value;
+}
+function toggleCalendarMode(){
+  const ids=['manualDate','reportFrom','reportTo'];
+  const captured={};
+  ids.forEach(id=>{if(!isDateInputEmpty(id))captured[id]=getDateInputValue(id);});
+  calendarMode=(calendarMode==='gregorian')?'jalali':'gregorian';
+  localStorage.setItem('calendarMode',calendarMode);
+  ids.forEach(id=>{if(captured[id])setDateInputValue(id,captured[id]);});
+  applyCalendarMode();
+}
+function applyCalendarMode(){
+  document.getElementById('calToggle').textContent='Calendar: '+(calendarMode==='jalali'?'Jalali':'Gregorian');
+  document.querySelectorAll('.date-greg').forEach(el=>{el.style.display=(calendarMode==='jalali')?'none':'';});
+  document.querySelectorAll('.date-jalali').forEach(el=>{el.style.display=(calendarMode==='jalali')?'flex':'none';});
+  renderHistory();
+  renderDataStats();
+  const activeTab=document.querySelector('.report-tabs button.active');
+  const types=['daily','weekly','monthly','custom'];
+  const tabs=[...document.querySelectorAll('.report-tabs button')];
+  if(activeTab&&document.getElementById('reportContent').innerHTML.trim()){
+    showReport(types[tabs.indexOf(activeTab)],activeTab);
+  }
+}
+// Full date label used in History and report titles.
+function displayDateStr(d){
+  if(calendarMode==='jalali'){
+    const j=jalaali.toJalaali(d);
+    return j.jd+' '+jalali_months[j.jm-1]+' '+j.jy;
+  }
+  return d.toLocaleDateString('en-US');
+}
+// Short label (no year) used for compact spots like heatmap tooltips.
+function displayDateShort(d){
+  if(calendarMode==='jalali'){
+    const j=jalaali.toJalaali(d);
+    return j.jd+' '+jalali_months[j.jm-1];
+  }
+  return d.toLocaleDateString('en-US',{month:'short',day:'numeric'});
 }
 
 
@@ -2051,6 +2240,19 @@ function updateLiveClock(){
 }
 updateLiveClock();
 setInterval(updateLiveClock,1000);
+
+// ===== INIT =====
+// Runs last, after every var/let/function above it has actually executed
+// (not just been hoisted) -- calendarMode, jalali_months, etc. are all
+// ready by this point.
+renderCategories();
+populateJalaliMonthSelects();
+(function(){
+  const d=new Date();
+  const iso=d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
+  setDateInputValue('manualDate',iso);
+})();
+applyCalendarMode();
 </script>
 <div id="undoToast" class="undo-toast"><span id="undoToastText"></span><button onclick="undoDelete()">Undo</button></div>
 </body>
