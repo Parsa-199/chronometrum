@@ -1079,8 +1079,13 @@ function renderCategories(){
     if(state.categories.includes(prev)) manualSel.value=prev;
   }
   if(!state.categories.length){list.innerHTML='<div class="empty">No categories yet</div>';return;}
+  const todayStr=new Date().toLocaleDateString('en-US');
   list.innerHTML=state.categories.map(c=>{
-    const total=state.sessions.filter(s=>s.category===c).reduce((a,s)=>a+s.duration,0);
+    // Today-only total -- this is what's shown next to the category name
+    // while working, so it naturally resets at midnight instead of
+    // carrying forward the all-time total. Full history is still in
+    // Reports/History, untouched.
+    const total=state.sessions.filter(s=>s.category===c&&s.dateStr===todayStr).reduce((a,s)=>a+s.duration,0);
     const sel=selectedCat===c?'selected':'';
     const locked=(running||paused)?' style="pointer-events:none;opacity:0.5"':'';
     return '<div class="cat-item selectable '+sel+'"'+locked+' data-cat="'+escapeHtml(c)+'"><span class="name"> '+escapeHtml(c)+'</span><span class="time">'+formatDuration(total)+'</span><button class="del" data-del="'+escapeHtml(c)+'"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button></div>';
