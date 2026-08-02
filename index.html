@@ -1186,12 +1186,48 @@ function removeCategory(name){
 }
 
 // ===== TIMER =====
+let currentSegmentDateStr=null; // which calendar day the currently-accumulating chunk belongs to
 function toggleTimer(){
   if(running||paused){stopTimer();}else{startTimer();}
+}
+// Mobile browsers frequently discard a backgrounded tab's whole JS state
+// after the screen locks or you switch apps for a while -- everything in
+// memory (running, startTime, elapsed) is gone when it reloads, silently
+// dropping the time that had accumulated. Persisting the active timer lets
+// us reconstruct it on load instead of just showing "Ready" with 0 saved.
+function saveActiveTimer(){
+  if(running||paused){
+    localStorage.setItem('timetracker_active',JSON.stringify({selectedCat,startTime,elapsed,running,paused,currentSegmentDateStr}));
+  }else{
+    localStorage.removeItem('timetracker_active');
+  }
+}
+// A session that's still running/paused when the calendar day rolls over
+// gets banked as a session dated the day it was actually worked, and a
+// fresh segment starts for the new day -- so "same task, 1h/2h/1h across
+// 3 days" saves as 3 correctly-dated sessions instead of one lump sum
+// dated whenever you finally hit Stop.
+function finalizeAndRollSegment(dur){
+  if(dur>0&&selectedCat&&currentSegmentDateStr){
+    const d=new Date(currentSegmentDateStr);
+    d.setHours(12,0,0,0);
+    state.sessions.push({
+      id:Date.now()+'-'+Math.random().toString(36).slice(2,8),
+      category:selectedCat,
+      duration:dur,
+      date:d.toISOString(),
+      dateStr:currentSegmentDateStr,
+      timeStr:'continued into next day'
+    });
+    saveState();
+    renderHistory();
+  }
+  currentSegmentDateStr=new Date().toLocaleDateString('en-US');
 }
 function startTimer(){
   if(!selectedCat){alert('Select a category first!');return;}
   running=true;paused=false;startTime=Date.now()-elapsed*1000;
+  currentSegmentDateStr=new Date().toLocaleDateString('en-US');
   document.getElementById('startBtn').className='start-btn stop';
   document.getElementById('startBtn').innerHTML='<span style="display:inline-flex;align-items:center;vertical-align:middle"><svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><rect x="4" y="4" width="16" height="16" rx="2"/></svg></span> Stop';
   document.getElementById('timerLabel').textContent='Working on: '+selectedCat;
@@ -1201,6 +1237,7 @@ function startTimer(){
   pauseBtn.innerHTML='<span style="display:inline-flex;align-items:center;vertical-align:middle"><svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><rect x="6" y="4" width="4" height="16" rx="1"/><rect x="14" y="4" width="4" height="16" rx="1"/></svg></span> Pause';
   timer=setInterval(updateTimer,1000);
   renderCategories();
+  saveActiveTimer();
 }
 function togglePause(){
   if(running){pauseTimer();}else if(paused){resumeTimer();}
@@ -1216,9 +1253,15 @@ function pauseTimer(){
   pauseBtn.innerHTML='<span style="display:inline-flex;align-items:center;vertical-align:middle"><svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><polygon points="5,3 19,12 5,21"/></svg></span> Resume';
   document.getElementById('timerLabel').textContent='Paused: '+selectedCat;
   renderCategories();
+  saveActiveTimer();
 }
 function resumeTimer(){
   if(!paused)return;
+  const nowDateStr=new Date().toLocaleDateString('en-US');
+  if(currentSegmentDateStr&&nowDateStr!==currentSegmentDateStr){
+    finalizeAndRollSegment(elapsed);
+    elapsed=0;
+  }
   paused=false;running=true;
   startTime=Date.now()-elapsed*1000;
   timer=setInterval(updateTimer,1000);
@@ -1227,6 +1270,7 @@ function resumeTimer(){
   pauseBtn.innerHTML='<span style="display:inline-flex;align-items:center;vertical-align:middle"><svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><rect x="6" y="4" width="4" height="16" rx="1"/><rect x="14" y="4" width="4" height="16" rx="1"/></svg></span> Pause';
   document.getElementById('timerLabel').textContent='Working on: '+selectedCat;
   renderCategories();
+  saveActiveTimer();
 }
 function stopTimer(){
   running=false;paused=false;clearInterval(timer);
@@ -1244,6 +1288,7 @@ function stopTimer(){
     saveState();
   }
   elapsed=0;updateTimerDisplay(0);
+  currentSegmentDateStr=null;
   document.getElementById('startBtn').className='start-btn start';
   document.getElementById('startBtn').innerHTML='<span style="display:inline-flex;align-items:center;vertical-align:middle"><svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><polygon points="5,3 19,12 5,21"/></svg></span> Start';
   const pauseBtn=document.getElementById('pauseBtn');
@@ -1252,10 +1297,66 @@ function stopTimer(){
   pauseBtn.innerHTML='<span style="display:inline-flex;align-items:center;vertical-align:middle"><svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><rect x="6" y="4" width="4" height="16" rx="1"/><rect x="14" y="4" width="4" height="16" rx="1"/></svg></span> Pause';
   document.getElementById('timerLabel').textContent='Saved! ('+formatDuration(dur)+')';
   renderCategories();
+  saveActiveTimer();
 }
 function updateTimer(){
+  const nowDateStr=new Date().toLocaleDateString('en-US');
+  if(currentSegmentDateStr&&nowDateStr!==currentSegmentDateStr){
+    const dur=Math.round((Date.now()-startTime)/1000);
+    finalizeAndRollSegment(dur);
+    startTime=Date.now();
+    renderCategories();
+    saveActiveTimer();
+  }
   elapsed=Math.round((Date.now()-startTime)/1000);
   updateTimerDisplay(elapsed);
+}
+// Reconstructs a running/paused timer after a page load -- either a normal
+// refresh, or (the common mobile case) the browser silently discarded the
+// backgrounded tab and rebuilt it from scratch, wiping every in-memory
+// variable. Wall-clock elapsed time is recomputed from the persisted
+// startTime, so time spent away is recovered instead of lost.
+function restoreActiveTimer(){
+  let raw;
+  try{raw=JSON.parse(localStorage.getItem('timetracker_active'));}catch(e){raw=null;}
+  if(!raw||!raw.selectedCat||!state.categories.includes(raw.selectedCat)){
+    localStorage.removeItem('timetracker_active');
+    return;
+  }
+  selectedCat=raw.selectedCat;
+  currentSegmentDateStr=raw.currentSegmentDateStr||new Date().toLocaleDateString('en-US');
+  if(raw.running&&raw.startTime){
+    startTime=raw.startTime;
+    elapsed=Math.round((Date.now()-startTime)/1000);
+  }else{
+    elapsed=raw.elapsed||0;
+  }
+  const nowDateStr=new Date().toLocaleDateString('en-US');
+  if(currentSegmentDateStr!==nowDateStr){
+    finalizeAndRollSegment(elapsed);
+    elapsed=0;
+  }
+  running=!!raw.running;
+  paused=!!raw.paused;
+  document.getElementById('startBtn').className='start-btn stop';
+  document.getElementById('startBtn').innerHTML='<span style="display:inline-flex;align-items:center;vertical-align:middle"><svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><rect x="4" y="4" width="16" height="16" rx="2"/></svg></span> Stop';
+  const pauseBtn=document.getElementById('pauseBtn');
+  pauseBtn.style.display='';
+  if(paused){
+    startTime=null;
+    pauseBtn.classList.add('resumed');
+    pauseBtn.innerHTML='<span style="display:inline-flex;align-items:center;vertical-align:middle"><svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><polygon points="5,3 19,12 5,21"/></svg></span> Resume';
+    document.getElementById('timerLabel').textContent='Paused: '+selectedCat;
+  }else{
+    startTime=Date.now()-elapsed*1000;
+    pauseBtn.classList.remove('resumed');
+    pauseBtn.innerHTML='<span style="display:inline-flex;align-items:center;vertical-align:middle"><svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><rect x="6" y="4" width="4" height="16" rx="1"/><rect x="14" y="4" width="4" height="16" rx="1"/></svg></span> Pause';
+    document.getElementById('timerLabel').textContent='Working on: '+selectedCat;
+    timer=setInterval(updateTimer,1000);
+  }
+  updateTimerDisplay(elapsed);
+  renderCategories();
+  saveActiveTimer();
 }
 function updateTimerDisplay(sec){
   const h=Math.floor(sec/3600);
@@ -1263,6 +1364,23 @@ function updateTimerDisplay(sec){
   const s=sec%60;
   document.getElementById('timerDisplay').textContent=
     String(h).padStart(2,'0')+':'+String(m).padStart(2,'0')+':'+String(s).padStart(2,'0');
+}
+// Session Count (and every other report figure) must reflect unique,
+// actually-worked sessions -- exclude exact-duplicate rows (same date,
+// category, duration -- e.g. leftover from a sync before the dedupe fix)
+// and zero-duration rows, so the count matches real work, not raw array
+// length. Negative (manual subtract) entries are real adjustments and stay.
+function dedupeSessions(list){
+  const seen=new Set();
+  const out=[];
+  list.forEach(s=>{
+    if(s.duration===0)return;
+    const key=s.date+'|'+s.category+'|'+s.duration;
+    if(seen.has(key))return;
+    seen.add(key);
+    out.push(s);
+  });
+  return out;
 }
 function formatDuration(sec){
   const neg=sec<0;
@@ -1289,14 +1407,14 @@ function showReport(type,btn){
   let compareRow='';
   if(type==='daily'){
     const todayStr=today.toLocaleDateString('en-US');
-    sessions=state.sessions.filter(s=>s.dateStr===todayStr);
+    sessions=dedupeSessions(state.sessions.filter(s=>s.dateStr===todayStr));
     title='Today';
     // % is against the full 24h day, not just the hours since your first
     // session today -- a day always "has" 24 hours available.
     availableSec=24*3600;
   }else if(type==='weekly'){
     const weekAgo=new Date(today);weekAgo.setDate(weekAgo.getDate()-7);
-    sessions=state.sessions.filter(s=>new Date(s.date)>=weekAgo);
+    sessions=dedupeSessions(state.sessions.filter(s=>new Date(s.date)>=weekAgo));
     title='Last 7 Days';
     // % is against the time elapsed since your first session in this
     // window, not a fixed 7*24h -- if you only started 2 days ago, the
@@ -1305,7 +1423,7 @@ function showReport(type,btn){
     // Week-over-week comparison against the 7 days directly before this window.
     const prevStart=new Date(today);prevStart.setDate(prevStart.getDate()-14);
     const prevEnd=weekAgo;
-    const prevTotal=state.sessions.filter(s=>{const d=new Date(s.date);return d>=prevStart&&d<prevEnd;}).reduce((a,s)=>a+s.duration,0);
+    const prevTotal=dedupeSessions(state.sessions.filter(s=>{const d=new Date(s.date);return d>=prevStart&&d<prevEnd;})).reduce((a,s)=>a+s.duration,0);
     const curTotal=sessions.reduce((a,s)=>a+s.duration,0);
     let cmpVal;
     if(prevTotal>0){
@@ -1319,7 +1437,7 @@ function showReport(type,btn){
     compareRow='<div class="report-row"><span>vs Last Week</span><span class="val">'+cmpVal+'</span></div>';
   }else if(type==='monthly'){
     const monthAgo=new Date(today);monthAgo.setDate(monthAgo.getDate()-30);
-    sessions=state.sessions.filter(s=>new Date(s.date)>=monthAgo);
+    sessions=dedupeSessions(state.sessions.filter(s=>new Date(s.date)>=monthAgo));
     title='Last 30 Days';
     availableSec=sessions.length?Math.max(1,Math.round((today-new Date(Math.min(...sessions.map(s=>new Date(s.date))))) /1000)):0;
   }else{
@@ -1337,7 +1455,7 @@ function showReport(type,btn){
     const fp=fromIso.split('-').map(Number),tp=toIso.split('-').map(Number);
     const fromDate=new Date(fp[0],fp[1]-1,fp[2],0,0,0);
     const toDate=new Date(tp[0],tp[1]-1,tp[2],23,59,59);
-    sessions=state.sessions.filter(s=>{const d=new Date(s.date);return d>=fromDate&&d<=toDate;});
+    sessions=dedupeSessions(state.sessions.filter(s=>{const d=new Date(s.date);return d>=fromDate&&d<=toDate;}));
     title=displayDateStr(fromDate)+' to '+displayDateStr(toDate);
     availableSec=Math.max(1,Math.round((toDate-fromDate)/1000));
   }
@@ -1350,7 +1468,7 @@ function showReport(type,btn){
   const opacities=[1,0.8,0.62,0.48,0.36,0.26,0.18];
   let html='<div class="report-card"><h3>'+title+'</h3>';
   html+='<div class="report-row"><span>Total Time</span><span class="val">'+formatDuration(total)+'</span></div>';
-  html+='<div class="report-row"><span>Session Count</span><span class="val">'+sessions.length+'</span></div>';
+  html+='<div class="report-row"><span>Categories Worked</span><span class="val">'+Object.keys(byCat).length+'</span></div>';
   html+='<div class="report-row"><span>Time Utilized</span><span class="val">'+(availableSec>0?Math.round(total/availableSec*100):0)+'%</span></div>';
   html+=compareRow;
   html+='</div><div class="report-card"><h3> By Category</h3><div class="bar-chart">';
@@ -2251,6 +2369,7 @@ setInterval(updateLiveClock,1000);
 // (not just been hoisted) -- calendarMode, jalali_months, etc. are all
 // ready by this point.
 renderCategories();
+restoreActiveTimer();
 populateJalaliMonthSelects();
 (function(){
   const d=new Date();
