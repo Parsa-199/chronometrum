@@ -659,6 +659,82 @@ body{
   opacity:0.75;
 }
 .cal-toggle:hover{opacity:1;background:rgba(232,224,212,0.1)}
+.cal-header{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  margin-bottom:12px;
+}
+.cal-nav-btn{
+  background:rgba(232,224,212,0.06);
+  color:#e8e0d4;
+  border:1px solid rgba(232,224,212,0.15);
+  border-radius:10px;
+  width:34px;height:34px;
+  font-size:18px;
+  cursor:pointer;
+  font-family:'Playfair Display',Georgia,serif;
+}
+.cal-nav-btn:hover{background:rgba(232,224,212,0.12)}
+.cal-weekdays{
+  display:grid;
+  grid-template-columns:repeat(7,1fr);
+  text-align:center;
+  font-size:11px;
+  opacity:0.5;
+  margin-bottom:6px;
+}
+.cal-grid{
+  display:grid;
+  grid-template-columns:repeat(7,1fr);
+  gap:4px;
+}
+.cal-cell{
+  aspect-ratio:1;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  border-radius:10px;
+  background:rgba(232,224,212,0.04);
+  color:#e8e0d4;
+  font-size:13px;
+  cursor:pointer;
+  position:relative;
+  transition:background 0.2s;
+}
+.cal-cell:hover{background:rgba(232,224,212,0.1)}
+.cal-cell.empty{visibility:hidden;cursor:default}
+.cal-cell.today{border:1px solid rgba(232,224,212,0.5)}
+.cal-cell.holiday{color:#b5524a}
+.cal-cell.selected.holiday{color:#7a2f28}
+.cal-cell.selected{background:#e8e0d4;color:#000000;font-weight:700}
+.cal-cell.has-activity::after{
+  content:'';
+  position:absolute;
+  bottom:5px;
+  width:4px;height:4px;
+  border-radius:50%;
+  background:#e8e0d4;
+  opacity:0.8;
+}
+.cal-cell.selected.has-activity::after{background:#000000}
+.cal-timeline{position:relative;padding-left:16px}
+.cal-timeline-item{position:relative;padding:8px 0 8px 14px;border-left:1px solid rgba(232,224,212,0.25)}
+.cal-timeline-item .cal-dot{
+  position:absolute;left:-4.5px;top:12px;
+  width:8px;height:8px;border-radius:50%;
+  background:#e8e0d4;
+}
+.cal-time{font-size:13px;font-weight:600}
+.cal-cat{font-size:13px;opacity:0.85;margin-top:2px}
+.cal-dur{font-size:11px;opacity:0.55;margin-top:2px}
+.cal-gap{
+  font-size:11px;
+  opacity:0.4;
+  padding:2px 0 2px 14px;
+  border-left:1px dashed rgba(232,224,212,0.2);
+  font-style:italic;
+}
 .heatmap{
   display:grid;
   grid-template-rows:repeat(7,1fr);
@@ -810,6 +886,7 @@ body::before{
 <button onclick="showPage('reports')"><span style="display:inline-flex;align-items:center;vertical-align:middle"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="12" width="4" height="9"/><rect x="10" y="7" width="4" height="14"/><rect x="17" y="3" width="4" height="18"/></svg></span> Reports</button>
 <button onclick="showPage('history')"><span style="display:inline-flex;align-items:center;vertical-align:middle"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><circle cx="4" cy="6" r="1" fill="currentColor"/><circle cx="4" cy="12" r="1" fill="currentColor"/><circle cx="4" cy="18" r="1" fill="currentColor"/></svg></span> History</button>
 <button onclick="showPage('data')"><span style="display:inline-flex;align-items:center;vertical-align:middle"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 21H5a2 2 0 01-2-2V5a2 2 0 012-2h11l5 5v11a2 2 0 01-2 2z"/><polyline points="17,21 17,13 7,13 7,21"/><polyline points="7,3 7,8 15,8"/></svg></span> Data</button>
+<button onclick="showPage('calendar')"><span style="display:inline-flex;align-items:center;vertical-align:middle"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg></span> Calendar</button>
 </div>
 
 <div class="greek-column left"><svg  viewBox="0 0 30 200" xmlns="http://www.w3.org/2000/svg">
@@ -999,6 +1076,20 @@ body::before{
 </div>
 </div>
 
+<!-- CALENDAR PAGE -->
+<div class="page" id="page-calendar">
+<div class="cal-header">
+<button class="cal-nav-btn" onclick="calPrevMonth()">‹</button>
+<h3 id="calTitle" class="section-heading" style="margin:0"></h3>
+<button class="cal-nav-btn" onclick="calNextMonth()">›</button>
+</div>
+<div class="cal-weekdays">
+<span>Sun</span><span>Mon</span><span>Tue</span><span>Wed</span><span>Thu</span><span>Fri</span><span>Sat</span>
+</div>
+<div id="calGrid" class="cal-grid"></div>
+<div id="calDayDetail" style="display:none;margin-top:12px"></div>
+</div>
+
 <script>
 // ===== DATA =====
 let state = loadState();
@@ -1049,10 +1140,11 @@ function showPage(id){
   document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
   document.querySelectorAll('.nav button').forEach(b=>b.classList.remove('active'));
   document.getElementById('page-'+id).classList.add('active');
-  document.querySelectorAll('.nav button')[['timer','reports','history','data'].indexOf(id)].classList.add('active');
+  document.querySelectorAll('.nav button')[['timer','reports','history','data','calendar'].indexOf(id)].classList.add('active');
   if(id==='reports') showReport('daily',document.querySelector('.report-tabs button'));
   if(id==='history') renderHistory();
   if(id==='data') renderDataStats();
+  if(id==='calendar') renderCalendar();
 }
 
 // ===== DATE =====
@@ -1117,6 +1209,32 @@ window.addEventListener('beforeunload',function(e){
     e.preventDefault();
     e.returnValue='';
   }
+});
+// A backgrounded mobile tab is often "frozen" (not reloaded) -- its
+// setInterval can silently fail to resume ticking on its own once the tab
+// is visible again, which is what made it look like the timer just stopped
+// and the elapsed hour never got counted. On every return to the tab we
+// force a fresh wall-clock recompute here rather than trusting the
+// interval to have kept itself going.
+document.addEventListener('visibilitychange',function(){
+  if(document.visibilityState!=='visible')return;
+  if(!running&&!paused)return;
+  const nowDateStr=new Date().toLocaleDateString('en-US');
+  if(currentSegmentDateStr&&nowDateStr!==currentSegmentDateStr){
+    const dur=running?Math.round((Date.now()-startTime)/1000):elapsed;
+    finalizeAndRollSegment(dur);
+    elapsed=0;
+    if(running)startTime=Date.now();
+  }else if(running&&startTime){
+    elapsed=Math.round((Date.now()-startTime)/1000);
+  }
+  updateTimerDisplay(elapsed);
+  if(running){
+    clearInterval(timer);
+    timer=setInterval(updateTimer,1000);
+  }
+  renderCategories();
+  saveActiveTimer();
 });
 function addCategory(){
   const input=document.getElementById('newCatInput');
@@ -1622,9 +1740,13 @@ function currentStreak(){
 function renderDataStats(){
   const total=state.sessions.reduce((a,s)=>a+s.duration,0);
   const days=new Set(state.sessions.map(s=>s.dateStr)).size;
+  // A "session" here means one distinct (day, category) combo, not one raw
+  // entry -- doing the same task twice in a day at different times is one
+  // session worth of work, even though it's two saved records.
+  const uniqueSessions=new Set(state.sessions.filter(s=>s.duration!==0).map(s=>s.dateStr+'|'+s.category)).size;
   document.getElementById('dataStats').innerHTML=
     '<h3> Overview</h3>'+
-    '<div class="report-row"><span>Total Sessions</span><span class="val">'+state.sessions.length+'</span></div>'+
+    '<div class="report-row"><span>Total Sessions</span><span class="val">'+uniqueSessions+'</span></div>'+
     '<div class="report-row"><span>Active Days</span><span class="val">'+days+'</span></div>'+
     '<div class="report-row"><span>Current Streak</span><span class="val">'+currentStreak()+' days</span></div>'+
     '<div class="report-row"><span>Total Time</span><span class="val">'+formatDuration(total)+'</span></div>'+
@@ -1632,6 +1754,147 @@ function renderDataStats(){
     '<div class="report-row"><span>Categories</span><span class="val">'+state.categories.length+'</span></div>';
   renderHeatmap();
   renderBackups();
+}
+// ===== CALENDAR =====
+let calGregYear=new Date().getFullYear(),calGregMonth=new Date().getMonth();
+let calJalYear=1,calJalMonth=1; // real values set in initCalendarView()
+let selectedCalDay=null;
+function initCalendarView(){
+  const j=jalaali.toJalaali(new Date());
+  calJalYear=j.jy;calJalMonth=j.jm;
+}
+function calPrevMonth(){
+  if(calendarMode==='jalali'){
+    calJalMonth--;if(calJalMonth<1){calJalMonth=12;calJalYear--;}
+  }else{
+    calGregMonth--;if(calGregMonth<0){calGregMonth=11;calGregYear--;}
+  }
+  renderCalendar();
+}
+function calNextMonth(){
+  if(calendarMode==='jalali'){
+    calJalMonth++;if(calJalMonth>12){calJalMonth=1;calJalYear++;}
+  }else{
+    calGregMonth++;if(calGregMonth>11){calGregMonth=0;calGregYear++;}
+  }
+  renderCalendar();
+}
+// Friday is Iran's weekly holiday, always. The fixed-date list below are
+// official Iranian holidays that land on the same Jalali calendar date
+// every year (Nowruz, Sizdah Bedar, etc.). Lunar Hijri-based holidays
+// (Eid al-Fitr, Eid al-Adha, Ashura, Tasua, Arbaeen, etc.) are NOT included
+// -- they shift by about 11 days a year and Iran's official dates depend
+// on moon-sighting announcements, not pure arithmetic, so hardcoding them
+// would eventually be wrong.
+const jalaliFixedHolidays=[[1,1],[1,2],[1,3],[1,4],[1,12],[1,13],[3,14],[3,15],[11,22],[12,29]];
+function isHoliday(gDate){
+  if(calendarMode==='jalali'){
+    if(gDate.getDay()===5)return true;
+    const j=jalaali.toJalaali(gDate);
+    return jalaliFixedHolidays.some(([m,d])=>j.jm===m&&j.jd===d);
+  }
+  return gDate.getDay()===0||gDate.getDay()===6;
+}
+function renderCalendar(){
+  const grid=document.getElementById('calGrid');
+  const titleEl=document.getElementById('calTitle');
+  if(!grid||!titleEl)return;
+  let daysInMonth,firstDow;
+  if(calendarMode==='jalali'){
+    titleEl.textContent=jalali_months[calJalMonth-1]+' '+calJalYear;
+    daysInMonth=jalaali.jalaaliMonthLength(calJalYear,calJalMonth);
+    const g=jalaali.toGregorian(calJalYear,calJalMonth,1);
+    firstDow=new Date(g.gy,g.gm-1,g.gd).getDay();
+  }else{
+    titleEl.textContent=greg_months[calGregMonth]+' '+calGregYear;
+    daysInMonth=new Date(calGregYear,calGregMonth+1,0).getDate();
+    firstDow=new Date(calGregYear,calGregMonth,1).getDay();
+  }
+  const byDate={};
+  state.sessions.forEach(s=>{if(s.duration>0)byDate[s.dateStr]=(byDate[s.dateStr]||0)+s.duration;});
+  const todayStr=new Date().toLocaleDateString('en-US');
+  let cells='';
+  for(let i=0;i<firstDow;i++)cells+='<div class="cal-cell empty"></div>';
+  for(let d=1;d<=daysInMonth;d++){
+    let gDate;
+    if(calendarMode==='jalali'){
+      const g=jalaali.toGregorian(calJalYear,calJalMonth,d);
+      gDate=new Date(g.gy,g.gm-1,g.gd);
+    }else{
+      gDate=new Date(calGregYear,calGregMonth,d);
+    }
+    const gDateStr=gDate.toLocaleDateString('en-US');
+    const cls=['cal-cell'];
+    if(byDate[gDateStr]>0)cls.push('has-activity');
+    if(gDateStr===todayStr)cls.push('today');
+    if(gDateStr===selectedCalDay)cls.push('selected');
+    if(isHoliday(gDate))cls.push('holiday');
+    cells+='<div class="'+cls.join(' ')+'" data-date="'+gDateStr+'" onclick="showDayDetail(\''+gDateStr+'\')">'+d+'</div>';
+  }
+  grid.innerHTML=cells;
+  if(selectedCalDay)showDayDetail(selectedCalDay,true);
+}
+function fmtClock(d){
+  return d.toLocaleTimeString('en-US',{hour:'numeric',minute:'2-digit'});
+}
+function showDayDetail(gDateStr,skipCellRefresh){
+  selectedCalDay=gDateStr;
+  if(!skipCellRefresh){
+    document.querySelectorAll('.cal-cell').forEach(c=>c.classList.toggle('selected',c.getAttribute('data-date')===gDateStr));
+  }
+  const daySessions=state.sessions.filter(s=>s.dateStr===gDateStr&&s.duration!==0);
+  const dateObj=new Date(gDateStr);
+  const total=daySessions.reduce((a,s)=>a+s.duration,0);
+  const uniqueCats=new Set(daySessions.map(s=>s.category)).size;
+  let html='<div class="report-card"><h3>'+displayDateStr(dateObj)+'</h3>';
+  html+='<div class="report-row"><span>Total Time</span><span class="val">'+formatDuration(total)+'</span></div>';
+  html+='<div class="report-row"><span>Categories</span><span class="val">'+uniqueCats+'</span></div>';
+  html+='</div>';
+  if(!daySessions.length){
+    html+='<div class="report-card"><div class="empty">No activity this day</div></div>';
+  }else{
+    // Only Stop-generated sessions have a real clock time (timeStr is when
+    // it was stopped, i.e. the end -- start = end minus duration). Manual
+    // entries/adjustments and midnight auto-splits don't have a real clock
+    // moment, so they're listed separately instead of guessed onto the timeline.
+    const timed=[],untimed=[];
+    daySessions.forEach(s=>{
+      if(/^\d/.test(s.timeStr||'')){
+        const end=new Date(s.date);
+        const start=new Date(end.getTime()-Math.abs(s.duration)*1000);
+        timed.push({s,start,end});
+      }else{
+        untimed.push(s);
+      }
+    });
+    timed.sort((a,b)=>a.start-b.start);
+    if(timed.length){
+      html+='<div class="report-card"><h3>Timeline</h3><div class="cal-timeline">';
+      let prevEnd=null;
+      timed.forEach(t=>{
+        if(prevEnd){
+          const gapMin=Math.round((t.start-prevEnd)/60000);
+          if(gapMin>=1){
+            const gapLabel=gapMin>=60?Math.floor(gapMin/60)+'h '+(gapMin%60)+'min':gapMin+'min';
+            html+='<div class="cal-gap">'+gapLabel+' gap</div>';
+          }
+        }
+        html+='<div class="cal-timeline-item"><div class="cal-dot"></div><div class="cal-time">'+fmtClock(t.start)+' – '+fmtClock(t.end)+'</div><div class="cal-cat">'+escapeHtml(t.s.category)+'</div><div class="cal-dur">'+formatDuration(t.s.duration)+'</div></div>';
+        prevEnd=t.end;
+      });
+      html+='</div></div>';
+    }
+    if(untimed.length){
+      html+='<div class="report-card"><h3>Other Entries</h3>';
+      untimed.forEach(s=>{
+        html+='<div class="report-row"><span>'+escapeHtml(s.category)+' <span class="session-note">('+s.timeStr+')</span></span><span class="val">'+formatDuration(s.duration)+'</span></div>';
+      });
+      html+='</div>';
+    }
+  }
+  const panel=document.getElementById('calDayDetail');
+  panel.innerHTML=html;
+  panel.style.display='block';
 }
 function renderBackups(){
   const el=document.getElementById('backupList');
@@ -2183,6 +2446,9 @@ function applyCalendarMode(){
   if(activeTab&&document.getElementById('reportContent').innerHTML.trim()){
     showReport(types[tabs.indexOf(activeTab)],activeTab);
   }
+  if(document.getElementById('page-calendar').classList.contains('active')){
+    renderCalendar();
+  }
 }
 // Full date label used in History and report titles.
 function displayDateStr(d){
@@ -2370,6 +2636,7 @@ setInterval(updateLiveClock,1000);
 // ready by this point.
 renderCategories();
 restoreActiveTimer();
+initCalendarView();
 populateJalaliMonthSelects();
 (function(){
   const d=new Date();
