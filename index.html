@@ -1108,14 +1108,26 @@ function loadState(){
   let s;
   try{const raw=localStorage.getItem('timetracker');s=raw?JSON.parse(raw):defaultState();}
   catch(e){s=defaultState();}
+  let changed=false;
+  // A stray leading/trailing space on a category name (easy to type on
+  // mobile) makes "Math" and "Math " count as two different categories
+  // everywhere -- reports, category list, merges. Normalize once at load
+  // so it can never silently split a category again.
+  if(Array.isArray(s.categories)){
+    const trimmed=s.categories.map(c=>String(c).trim());
+    if(JSON.stringify(trimmed)!==JSON.stringify(s.categories)){s.categories=trimmed;changed=true;}
+  }
   // Older sessions (saved before ids existed) need one assigned so
   // edit/delete/undo/merge can all reference them reliably. This MUST be
   // deterministic (same content -> same id) rather than random -- a random
   // id assigned independently on two devices for the very same legacy
   // session gives it two different ids, so a later sync/merge treats it as
   // two separate sessions and double-counts its duration.
-  let changed=false;
   (s.sessions||[]).forEach(sess=>{
+    if(typeof sess.category==='string'){
+      const trimmedCat=sess.category.trim();
+      if(trimmedCat!==sess.category){sess.category=trimmedCat;changed=true;}
+    }
     if(!sess.id){sess.id=sess.date+'|'+sess.category+'|'+sess.duration;changed=true;}
   });
   if(changed) localStorage.setItem('timetracker',JSON.stringify(s));
@@ -1493,7 +1505,7 @@ function dedupeSessions(list){
   const out=[];
   list.forEach(s=>{
     if(s.duration===0)return;
-    const key=s.date+'|'+s.category+'|'+s.duration;
+    const key=s.date+'|'+normCat(s.category)+'|'+s.duration;
     if(seen.has(key))return;
     seen.add(key);
     out.push(s);
@@ -1514,35 +1526,66 @@ function formatDuration(sec){
 }
 
 // ===== REPORTS =====
-function showReport(type,btn){
-  document.querySelectorAll('.report-tabs button').forEach(b=>b.classList.remove('active'));
-  if(btn)btn.classList.add('active');
-  document.getElementById('customRange').style.display=(type==='custom')?'flex':'none';
-  const today=new Date();
-  let sessions=[];
-  let title='';
-  let availableSec=0;
-  let compareRow='';
+// ===== REPORT ENGINE (rewritten for correctness & clarity) =====
+// Every helper here is deliberately small and defensive:
+// - normCat() so a stray trailing space never splits one category into two
+// - earliestDate() replaces a Math.min(...spread) with a plain loop, which
+//   is both easier to reason about and immune to "too many arguments"
+//   failures on large session lists
+// - every date field is guarded against Invalid Date before being used in
+//   arithmetic, since one bad value silently poisons Math.min/Math.max
+//   with NaN and makes an unrelated percentage go to 0
+function normCat(name){
+  return String(name==null?'':name).trim();
+}
+function safeDate(v){
+  const d=new Date(v);
+  return isNaN(d.getTime())?null:d;
+}
+function earliestDate(list){
+  let min=null;
+  for(const s of list){
+    const d=safeDate(s.date);
+    if(d&&(!min||d<min))min=d;
+  }
+  return min;
+}
+function sumDuration(list){
+  let total=0;
+  for(const s of list)total+=(typeof s.duration==='number'?s.duration:0);
+  return total;
+}
+function groupByCategory(list){
+  const byCat={};
+  for(const s of list){
+    const cat=normCat(s.category);
+    if(!cat)continue;
+    byCat[cat]=(byCat[cat]||0)+(typeof s.duration==='number'?s.duration:0);
+  }
+  return byCat;
+}
+function getReportPeriod(type,today){
+  // Returns {sessions, title, availableSec, compareRow}
   if(type==='daily'){
     const todayStr=today.toLocaleDateString('en-US');
-    sessions=dedupeSessions(state.sessions.filter(s=>s.dateStr===todayStr));
-    title='Today';
+    const sessions=dedupeSessions(state.sessions.filter(s=>s.dateStr===todayStr));
     // % is against the full 24h day, not just the hours since your first
     // session today -- a day always "has" 24 hours available.
-    availableSec=24*3600;
-  }else if(type==='weekly'){
+    return {sessions,title:'Today',availableSec:24*3600,compareRow:''};
+  }
+  if(type==='weekly'){
     const weekAgo=new Date(today);weekAgo.setDate(weekAgo.getDate()-7);
-    sessions=dedupeSessions(state.sessions.filter(s=>new Date(s.date)>=weekAgo));
-    title='Last 7 Days';
+    const sessions=dedupeSessions(state.sessions.filter(s=>{const d=safeDate(s.date);return d&&d>=weekAgo;}));
     // % is against the time elapsed since your first session in this
     // window, not a fixed 7*24h -- if you only started 2 days ago, the
     // window you actually "had" is 2 days, not 7.
-    availableSec=sessions.length?Math.max(1,Math.round((today-new Date(Math.min(...sessions.map(s=>new Date(s.date))))) /1000)):0;
-    // Week-over-week comparison against the 7 days directly before this window.
+    const earliest=earliestDate(sessions);
+    const availableSec=earliest?Math.max(1,Math.round((today-earliest)/1000)):0;
     const prevStart=new Date(today);prevStart.setDate(prevStart.getDate()-14);
     const prevEnd=weekAgo;
-    const prevTotal=dedupeSessions(state.sessions.filter(s=>{const d=new Date(s.date);return d>=prevStart&&d<prevEnd;})).reduce((a,s)=>a+s.duration,0);
-    const curTotal=sessions.reduce((a,s)=>a+s.duration,0);
+    const prevSessions=dedupeSessions(state.sessions.filter(s=>{const d=safeDate(s.date);return d&&d>=prevStart&&d<prevEnd;}));
+    const prevTotal=sumDuration(prevSessions);
+    const curTotal=sumDuration(sessions);
     let cmpVal;
     if(prevTotal>0){
       const change=Math.round((curTotal-prevTotal)/prevTotal*100);
@@ -1552,58 +1595,61 @@ function showReport(type,btn){
     }else{
       cmpVal='—';
     }
-    compareRow='<div class="report-row"><span>vs Last Week</span><span class="val">'+cmpVal+'</span></div>';
-  }else if(type==='monthly'){
-    const monthAgo=new Date(today);monthAgo.setDate(monthAgo.getDate()-30);
-    sessions=dedupeSessions(state.sessions.filter(s=>new Date(s.date)>=monthAgo));
-    title='Last 30 Days';
-    availableSec=sessions.length?Math.max(1,Math.round((today-new Date(Math.min(...sessions.map(s=>new Date(s.date))))) /1000)):0;
-  }else{
-    // custom range
-    if(isDateInputEmpty('reportFrom')){
-      const d=new Date(today);d.setDate(d.getDate()-7);
-      const iso=d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
-      setDateInputValue('reportFrom',iso);
-    }
-    if(isDateInputEmpty('reportTo')){
-      const iso=today.getFullYear()+'-'+String(today.getMonth()+1).padStart(2,'0')+'-'+String(today.getDate()).padStart(2,'0');
-      setDateInputValue('reportTo',iso);
-    }
-    const fromIso=getDateInputValue('reportFrom'),toIso=getDateInputValue('reportTo');
-    const fp=fromIso.split('-').map(Number),tp=toIso.split('-').map(Number);
-    const fromDate=new Date(fp[0],fp[1]-1,fp[2],0,0,0);
-    const toDate=new Date(tp[0],tp[1]-1,tp[2],23,59,59);
-    sessions=dedupeSessions(state.sessions.filter(s=>{const d=new Date(s.date);return d>=fromDate&&d<=toDate;}));
-    title=displayDateStr(fromDate)+' to '+displayDateStr(toDate);
-    availableSec=Math.max(1,Math.round((toDate-fromDate)/1000));
+    return {sessions,title:'Last 7 Days',availableSec,compareRow:'<div class="report-row"><span>vs Last Week</span><span class="val">'+cmpVal+'</span></div>'};
   }
-  const total=sessions.reduce((a,s)=>a+s.duration,0);
-  const byCat={};
-  sessions.forEach(s=>{byCat[s.category]=(byCat[s.category]||0)+s.duration;});
-  const maxVal=Math.max(...Object.values(byCat),1);
+  if(type==='monthly'){
+    const monthAgo=new Date(today);monthAgo.setDate(monthAgo.getDate()-30);
+    const sessions=dedupeSessions(state.sessions.filter(s=>{const d=safeDate(s.date);return d&&d>=monthAgo;}));
+    const earliest=earliestDate(sessions);
+    const availableSec=earliest?Math.max(1,Math.round((today-earliest)/1000)):0;
+    return {sessions,title:'Last 30 Days',availableSec,compareRow:''};
+  }
+  // custom range
+  if(isDateInputEmpty('reportFrom')){
+    const d=new Date(today);d.setDate(d.getDate()-7);
+    setDateInputValue('reportFrom',d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0'));
+  }
+  if(isDateInputEmpty('reportTo')){
+    setDateInputValue('reportTo',today.getFullYear()+'-'+String(today.getMonth()+1).padStart(2,'0')+'-'+String(today.getDate()).padStart(2,'0'));
+  }
+  const fp=getDateInputValue('reportFrom').split('-').map(Number);
+  const tp=getDateInputValue('reportTo').split('-').map(Number);
+  const fromDate=new Date(fp[0],fp[1]-1,fp[2],0,0,0);
+  const toDate=new Date(tp[0],tp[1]-1,tp[2],23,59,59);
+  const sessions=dedupeSessions(state.sessions.filter(s=>{const d=safeDate(s.date);return d&&d>=fromDate&&d<=toDate;}));
+  const availableSec=Math.max(1,Math.round((toDate-fromDate)/1000));
+  return {sessions,title:displayDateStr(fromDate)+' to '+displayDateStr(toDate),availableSec,compareRow:''};
+}
+function showReport(type,btn){
+  document.querySelectorAll('.report-tabs button').forEach(b=>b.classList.remove('active'));
+  if(btn)btn.classList.add('active');
+  document.getElementById('customRange').style.display=(type==='custom')?'flex':'none';
+  const{sessions,title,availableSec,compareRow}=getReportPeriod(type,new Date());
+  const total=sumDuration(sessions);
+  const byCat=groupByCategory(sessions);
+  const catNames=Object.keys(byCat);
+  const maxVal=Math.max(...catNames.map(c=>byCat[c]),1);
   // Monochrome palette: same accent color at decreasing opacity, so every
   // bar stays distinct without introducing new hues to the theme.
   const opacities=[1,0.8,0.62,0.48,0.36,0.26,0.18];
   let html='<div class="report-card"><h3>'+title+'</h3>';
   html+='<div class="report-row"><span>Total Time</span><span class="val">'+formatDuration(total)+'</span></div>';
-  html+='<div class="report-row"><span>Categories Worked</span><span class="val">'+Object.keys(byCat).length+'</span></div>';
+  html+='<div class="report-row"><span>Categories Worked</span><span class="val">'+catNames.length+'</span></div>';
   html+='<div class="report-row"><span>Time Utilized</span><span class="val">'+(availableSec>0?Math.round(total/availableSec*100):0)+'%</span></div>';
   html+=compareRow;
   html+='</div><div class="report-card"><h3> By Category</h3><div class="bar-chart">';
-  let i=0;
-  for(const[cat,dur] of Object.entries(byCat)){
+  catNames.forEach((cat,i)=>{
+    const dur=byCat[cat];
     const pct=maxVal>0?Math.max(0,dur/maxVal*100):0;
-    var pctAvail=availableSec>0?Math.round(dur/availableSec*100):0;
+    const pctAvail=availableSec>0?Math.round(dur/availableSec*100):0;
     const op=opacities[i%opacities.length];
     html+='<div class="bar-row"><span class="bar-label">'+escapeHtml(cat)+'</span><div class="bar-track"><div class="bar-fill" style="width:'+pct+'%;background:#e8e0d4;opacity:'+op+'"></div></div><span class="bar-val">'+(dur>0?formatDuration(dur):'—')+'</span><span class="bar-pct">'+pctAvail+'%</span></div>';
-    i++;
-  }
+  });
   html+='</div></div>';
-  // Today sessions
   if(sessions.length){
     html+='<div class="report-card"><h3> Details</h3>';
     sessions.slice(-10).reverse().forEach(s=>{
-      html+='<div class="report-row"><span>'+escapeHtml(s.category)+' — '+s.timeStr+'</span><span class="val">'+formatDuration(s.duration)+'</span></div>';
+      html+='<div class="report-row"><span>'+escapeHtml(normCat(s.category))+' — '+s.timeStr+'</span><span class="val">'+formatDuration(s.duration)+'</span></div>';
     });
     html+='</div>';
   }
@@ -1781,17 +1827,73 @@ function calNextMonth(){
 }
 // Friday is Iran's weekly holiday, always. The fixed-date list below are
 // official Iranian holidays that land on the same Jalali calendar date
-// every year (Nowruz, Sizdah Bedar, etc.). Lunar Hijri-based holidays
-// (Eid al-Fitr, Eid al-Adha, Ashura, Tasua, Arbaeen, etc.) are NOT included
-// -- they shift by about 11 days a year and Iran's official dates depend
-// on moon-sighting announcements, not pure arithmetic, so hardcoding them
-// would eventually be wrong.
+// every year (Nowruz, Sizdah Bedar, Islamic Republic Day, Islamic
+// Revolution Victory Day, Oil Nationalization Day, etc.).
 const jalaliFixedHolidays=[[1,1],[1,2],[1,3],[1,4],[1,12],[1,13],[3,14],[3,15],[11,22],[12,29]];
+
+// ===== HIJRI (lunar) calendar, computed algorithmically -- not a per-year
+// manual list. Religious holidays (Eid al-Fitr, Ashura, etc.) always fall
+// on the same day-of-month in the Hijri calendar; they only *look* like
+// they shift in the Jalali calendar because a Hijri year is shorter than a
+// solar year. Converting every Jalali day to its Hijri equivalent and
+// checking against a FIXED Hijri (month, day) list is therefore permanent
+// -- it never needs a manual update for a new year. This is the standard
+// tabular/arithmetic Islamic calendar (the same one used by glibc, ICU,
+// etc.), which can be off by a day some years from Iran's official
+// moon-sighting announcement, but never drifts and needs no maintenance.
+function gregorianToJDN(gy,gm,gd){
+  const a=Math.floor((14-gm)/12);
+  const y=gy+4800-a;
+  const m=gm+12*a-3;
+  return gd+Math.floor((153*m+2)/5)+365*y+Math.floor(y/4)-Math.floor(y/100)+Math.floor(y/400)-32045;
+}
+function jdnToHijri(jdn){
+  let l=jdn-1948440+10632;
+  const n=Math.floor((l-1)/10631);
+  l=l-10631*n+354;
+  const j=Math.floor((10985-l)/5316)*Math.floor((50*l)/17719)+Math.floor(l/5670)*Math.floor((43*l)/15238);
+  l=l-Math.floor((30-j)/15)*Math.floor((17719*j)/50)-Math.floor(j/16)*Math.floor((15238*j)/43)+29;
+  const hm=Math.floor((24*l)/709);
+  const hd=l-Math.floor((709*hm)/24);
+  const hy=30*n+j-30;
+  return{hy,hm,hd};
+}
+function hijriToJDN(hy,hm,hd){
+  return hd+Math.ceil(29.5*(hm-1))+(hy-1)*354+Math.floor((3+11*hy)/30)+1948440-385;
+}
+function hijriMonthLength(hy,hm){
+  let nextM=hm+1,nextY=hy;
+  if(nextM>12){nextM=1;nextY=hy+1;}
+  return hijriToJDN(nextY,nextM,1)-hijriToJDN(hy,hm,1);
+}
+function gregorianToHijri(gDate){
+  return jdnToHijri(gregorianToJDN(gDate.getFullYear(),gDate.getMonth()+1,gDate.getDate()));
+}
+// [Hijri month, Hijri day] for occasions Iran observes as official
+// holidays. Imam Reza's martyrdom is deliberately NOT in this fixed list --
+// it's traditionally the last day of Safar (29th or 30th depending on the
+// year), so it's checked separately below instead of hardcoding a day
+// number that would be wrong in a 29-day Safar.
+const hijriFixedHolidays=[
+  [1,9],[1,10],   // Muharram: Tasua, Ashura
+  [2,20],[2,28],  // Safar: Arbaeen, Prophet's death + Imam Hassan Mojtaba martyrdom
+  [3,8],[3,17],   // Rabi I: Imam Hassan Askari martyrdom, Prophet's birthday
+  [6,3],          // Jumada II: Fatima Zahra martyrdom
+  [7,13],[7,27],  // Rajab: Imam Ali's birth, Mab'ath
+  [8,15],         // Sha'ban: Imam Zaman's birth
+  [9,21],         // Ramadan: Imam Ali's martyrdom
+  [10,1],         // Shawwal: Eid al-Fitr
+  [12,10],[12,18] // Dhul Hijjah: Eid al-Adha (Ghorban), Eid al-Ghadir
+];
 function isHoliday(gDate){
   if(calendarMode==='jalali'){
-    if(gDate.getDay()===5)return true;
+    if(gDate.getDay()===5)return true; // Friday
     const j=jalaali.toJalaali(gDate);
-    return jalaliFixedHolidays.some(([m,d])=>j.jm===m&&j.jd===d);
+    if(jalaliFixedHolidays.some(([m,d])=>j.jm===m&&j.jd===d))return true;
+    const h=gregorianToHijri(gDate);
+    if(hijriFixedHolidays.some(([m,d])=>h.hm===m&&h.hd===d))return true;
+    if(h.hm===2&&h.hd===hijriMonthLength(h.hy,2))return true; // Imam Reza: last day of Safar
+    return false;
   }
   return gDate.getDay()===0||gDate.getDay()===6;
 }
